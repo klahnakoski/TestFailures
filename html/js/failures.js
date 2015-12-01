@@ -10,85 +10,16 @@ var FROM_DATE = Date.today().subtract(Duration.WEEK);
 var RECENT_DATE = Date.today().subtract(Duration.DAY);
 var TO_DATE = Date.now().floor(Duration.DAY);
 var NOW = Date.now();
+var REMOVE_BUTTON_CLASS = "x";
 
 var tests = {};  //MAP FROM FULL NAME TO UNIQUE TEST
-var exclude = [];  //STUFF TO IGNORE
+window.exclude = [];  //STUFF TO IGNORE
 
 
-
-function showFailureTable(testGroups){
-	var header = '<tr>' +
-		'<th>Score</th>' +
-		'<th>Last Fail</th>' +
-		'<th>Fail Count</th>' +
-		'<th>Suite</th>' +
-		'<th>Test</th>' +
-		'<th>Platform</th>' +
-		'<th>Build Type</th>' +
-		'<th style="width:200px;">Subtests</th>' +
-		'</tr>';
-
-	var ROW_TEMPLATE = new Template('<tr class="hoverable" id="' + FAIL_PREFIX + '{{rownum}}">' +
-		'<td>{{score}}</td>' +
-		'<td>{{last_fail|datetime}}</td>' +
-		'<td>{{failure_count|html}}</td>' +
-		'<td>{{suite|html}}</td>' +
-		'<td>{{test|html}}</td>' +
-		'<td>{{platform|html}}</td>' +
-		'<td>{{build_type|html}}</td>' +
-		'<td style="width:200px;">{{subtests|json|html}}</td>' +
-		'</tr>'
-	);
-
-	body = testGroups.map(function(g, i){
-		g.rownum=i;
-		g.score = coalesce(g.score, "");
-		return ROW_TEMPLATE.expand(g);
-	}).join("");
-
-	$("#details").html(
-		'<table class="table">' +
-		header +
-		body +
-		'</table>'
-	);
-
-	//ADD CLICKERS
-	testGroups.forall(function(g){
-		var id = g.rownum;
-		$("#" + FAIL_PREFIX + id).click(function(e){
-			if (currentClicker){
-				currentClicker.kill();
-			}//endif
-			$("#chart").html("");
-			var id = convert.String2Integer($(this).attr("id").substring(FAIL_PREFIX.length));
-			var g=testGroups[id];
-
-			if (!g.thread){
-				g.thread = new Thread(function*(){
-					yield (getDetails(0, [g]));
-				});
-				g.thread.start();
-			}//endif
-
-			currentClicker = Thread.run(chart(g));
-		});
-	});
-
-	//ADD REMOVE BUTTONS
-	$("#details").find("td").each(function(){
-		add_remove_button(this);
-	});
-	layoutAll();
-
-}//function
-
-
-var REMOVE_BUTTON_CLASS = "x";
 
 
 var add_remove_button = function(element){
-	element = $(element);
+//	element = $(element);
 	var id = "remove_" + Util.UID();
 
 	var BUTTON = new Template(
@@ -100,9 +31,12 @@ var add_remove_button = function(element){
 
 	// CLICK WILL ADD RESULTS TO EXCLUDE LIST
 	$("#"+id).click(function(e){
-		var text = $(this).parent().text();
-		exclude = Array.union(exclude, [text]);
+		var self = $(this);
+		var text = self.parent().text();
+		var column =
+		window.exclude = Array.union(window.exclude, [text]);
 		//REMOVE ALL ROWS WITH GIVEN text
+
 		//ADD REMOVE TO URL
 		//ADD REMOVE TO LIST OF REMOVES
 	});
@@ -281,4 +215,74 @@ var addGroupId = function(g, edges){
 	});
 };
 
+
+function showFailureTable(testGroups){
+	var header = '<tr>' +
+		'<th>Score</th>' +
+		'<th>Last Fail</th>' +
+		'<th>Fail Count</th>' +
+		'<th>Suite</th>' +
+		'<th>Test</th>' +
+		'<th>Platform</th>' +
+		'<th>Build Type</th>' +
+		'<th style="width:200px;">Subtests</th>' +
+		'</tr>';
+
+	var ROW_TEMPLATE = new Template('<tr class="hoverable" id="' + FAIL_PREFIX + '{{rownum}}">' +
+		'<td>{{score}}</td>' +
+		'<td>{{last_fail|datetime}}</td>' +
+		'<td>{{failure_count|html}}</td>' +
+		'<td columnName="run.suite">{{suite|html}}</td>' +
+		'<td columnName="result.test">{{test|html}}</td>' +
+		'<td columnName="build.platform">{{platform|html}}</td>' +
+		'<td columnName="build.type">{{build_type|html}}</td>' +
+		'<td style="width:200px;">{{subtests|json|html}}</td>' +
+		'</tr>'
+	);
+
+	body = testGroups.map(function(g, i){
+		g.rownum=i;
+		g.score = coalesce(g.score, "");
+		return ROW_TEMPLATE.expand(g);
+	}).join("");
+
+	$("#details").html(
+		'<table class="table">' +
+		header +
+		body +
+		'</table>'
+	);
+
+	//ADD CLICKERS
+	testGroups.forall(function(g){
+		var id = g.rownum;
+		$("#" + FAIL_PREFIX + id).click(function(e){
+			if (currentClicker){
+				currentClicker.kill();
+			}//endif
+			$("#chart").html("");
+			var id = convert.String2Integer($(this).attr("id").substring(FAIL_PREFIX.length));
+			var g=testGroups[id];
+
+			if (!g.thread){
+				g.thread = new Thread(function*(){
+					yield (getDetails(0, [g]));
+				});
+				g.thread.start();
+			}//endif
+
+			currentClicker = Thread.run(chart(g));
+		});
+	});
+
+	//ADD REMOVE BUTTONS
+	$("#details").find("td").each(function(){
+		var self = $(this);
+		if (self.attr("columnName")){
+			add_remove_button(self);
+		}
+	});
+	layoutAll();
+
+}//function
 

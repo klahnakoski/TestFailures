@@ -14,7 +14,6 @@ importScript([
 	"../../lib/jsonlint/jsl.format.js"
 ]);
 
-importScript("Filter.js");
 importScript("PartitionFilter.js");
 importScript("TeamFilter.js");
 importScript("RadioFilter.js");
@@ -34,6 +33,11 @@ importScript("../aFormat.js");
 
 GUI = {};
 (function () {
+	if (window.GUI === undefined) {
+		window.GUI = {};
+	}//endif
+	var GUI = window.GUI;
+
 		GUI.state = {};
 		GUI.customFilters = [];
 

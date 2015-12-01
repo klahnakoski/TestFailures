@@ -50,7 +50,6 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 					{"gte": {"run.timestamp": RECENT_DATE.unix()}},
 					{"lt": {"run.timestamp": TO_DATE.unix()}},
 					{"eq": {"result.ok": false}},
-//					{"eq": {"ok": false}},
 					{"eq": {"build.branch": "mozilla-inbound"}}
 				]},
 				"limit": (DEBUG ? 100 : 100000),
@@ -70,8 +69,6 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 
 		a = Log.action("calculating...", true);
 		try {
-
-
 			var testGroups = (yield (Qb.calc2List({
 				"from": raw_failures,
 				"select": [
