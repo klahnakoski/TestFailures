@@ -71,6 +71,12 @@ $(document).ready(function () {
 
 
 	function dynamicState(){
+		// LOOP THROUGH AN ARRAY OF "STATES" (aka CLASS NAMES)
+		//
+		// THE INITIAL CLASS IS ASSIGNED TO `class`, AND LOOKED UP IN THE
+		// `dynamic-state` ARRAY TO FIND CURRENT INDEX.  EACH `click()` WILL
+		// ADVANCE THE INDEX.
+
 		$(this).find("[dynamic-state]").each(function(){
 			//DO NOT PROCESS MORE THAN ONCE
 			$(this).attr("dynamic-state-cycle", $(this).attr("dynamic-state")).removeAttr("dynamic-state");

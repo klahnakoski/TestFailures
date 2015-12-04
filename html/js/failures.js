@@ -1,4 +1,5 @@
 
+importScript("../modevlib/charts/mgChart.js");
 importScript("../modevlib/layouts/dynamic.js");
 importScript("../modevlib/layouts/layout.js");
 importScript("../modevlib/collections/aMatrix.js");
@@ -20,14 +21,18 @@ window.exclude = [];  //STUFF TO IGNORE
 
 var add_remove_button = function(element){
 //	element = $(element);
-	var id = "remove_" + Util.UID();
+	var rawID = Util.UID();
+	var id = "remove_" + rawID;
+	var show_id = "show_" + rawID;
 
 	var BUTTON = new Template(
-		'<div id={{id|quote}} layout="mr=..mr" style="height:20px;width=20px;display: none;" dynamicStyle=":hover={background_color:red}">' +
+		'<div id="{{show_id|quote}}" layout="tl=..tl;br=..br" style="display:none;" dynamicStyle=":hover={background_color:red}">' +
+		'<div id={{id|quote}} layout="mr=..mr" style="height:20px;width=20px;">' +
 		'<img src="images/x-3x.png">' +
+		'</div>' +
 		'</div>'
 	);
-	element.append(BUTTON.expand({"id":id}));
+	element.append(BUTTON.expand({"id": id, "show_id": show_id}));
 
 	// CLICK WILL ADD RESULTS TO EXCLUDE LIST
 	$("#"+id).click(function(e){
@@ -43,12 +48,12 @@ var add_remove_button = function(element){
 
 	// SHOW BUTTON DURING HOVER
 	element.hover(function(e){
-		$("#"+id).show();
+		$("#"+show_id).show();
 	}, function(e){
-		$("#"+id).hide();
+		$("#"+show_id).hide();
 	});
 
-	$(element).updateDynamicStyle();
+	$(element).updateDynamic();
 };
 
 
@@ -79,14 +84,13 @@ var chart = function*(testGroup){
 		var duration = (yield(Q({
 			"from": testGroup.details,
 			"select": [
-				{"value": "((build_date!=null && duration==null) ? -1 : duration)", "aggregate": "average"},
-				{"value": "build_date", "aggregate": "min"}
+				{"name":"build_date", "value": "Date.newInstance(build_date)", "aggregate": "min"},
+				{"name": "duration", "value": "((build_date!=null && duration==null) ? -1 : duration)", "aggregate": "average"}
 			],
 			"edges": [
 				{
 					"name":"result",
-					"value": //{"when":{"missing":"duration"}, "then":{"literal":"incomplete"}, "else":"ok"}
-					"(duration==null ? 'incomplete' : ok)",
+					"value": "(duration==null ? 'incomplete' : ok)",
 					"domain":{"type":"set", "partitions":[
 						{"name":"pass", "value":true, "style":{"color": "#1f77b4"}},
 						{"name":"fail", "value":false, "style": {"color": "#ff7f0e"}},
@@ -94,30 +98,32 @@ var chart = function*(testGroup){
 					]}
 				},
 				{"value": "revision", "domain": {"partitions": revisions}}
-			]
+			],
+			"meta": {"format": "list"}
 		})));
 
-		new Matrix({"data":duration.cube}).forall(function(v){
-			if (v.build_date != null){
+		//ENSURE WE HAVE A duration FOR ALL ROWS
+		duration.data.forall(function(v){
+			if (v.build_date == null){
 				v.duration = -1;
 			}//endif
 		});
 
 		aChart.showScatter({
-			"id": "chart",
-			"cube": duration,
-			xAxisSize: 50,
-			"legend": true,
-			extensionPoints: {
-				line_lineWidth: 0
-			}
+			"target": "chart",
+			"hover":{"format":{
+				"x": "{{.|format('NNN dd, HH:mm')}}",
+				"y": ", duration={{.|round(1)}}sec"
+			}},
+			"data": duration,
+			"axis": {"x": {"format":"{{.|format('NNN dd, HH:mm')}}", "size": 50, "value":"build_date"}}
 		});
 	} finally {
 		Log.actionDone(a);
 	}//try
 };//function
 
-// ALL TESTS RESUTLS FOR TESTS IN LIST testGroups
+// ALL TESTS RESULTS FOR TESTS IN LIST testGroups
 var getDetails = function*(group, testGroups){
 	var a = Log.action("get details #" + group, true);
 	try {
@@ -164,7 +170,8 @@ var getDetails = function*(group, testGroups){
 				{"value": "_group_id", "aggregate": "one"},
 				{"name": "success_count", "value": ".", "aggregate": "count"}
 			],
-			"edges": ["suite", "test", "platform", "build_type"]
+			"edges": ["suite", "test", "platform", "build_type"],
+			"meta": {"format": "cube"}
 		}))).list;
 
 

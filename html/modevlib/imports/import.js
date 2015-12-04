@@ -15,7 +15,7 @@ var importScript;
 	"use strict";
 
 	var METHOD_NAME = "importScript";
-	var FORCE_RELOAD = true;  //COMPENSATE FOR BUG https://bugzilla.mozilla.org/show_bug.cgi?id=991252
+	var FORCE_RELOAD = false;  //COMPENSATE FOR BUG https://bugzilla.mozilla.org/show_bug.cgi?id=991252
 	var DEBUG = false;
 
 	if (typeof(window.Log) == "undefined") {
@@ -429,7 +429,14 @@ var importScript;
 		return processed;
 	}//method
 
-	var stackPattern=/(.*)@(.*):(\d+):(\d+)/;
+	var stackPattern;
+	if (!!window.chrome){
+		//GOOGLE CHROME
+		stackPattern=/(\d*)(.*):(\d+):(\d+)/; //(\d*) is a dummy placeholder
+	}else{
+		//FIREFOX
+		stackPattern=/(.*)@(.*):(\d+):(\d+)/;
+	}//endif
 	function parseStack(stackString){
 		var output = [];
 		if (stackString===undefined || stackString==null) return output;
@@ -466,9 +473,9 @@ var importScript;
 
 			numRemaining++;
 			(function (fullPath) {
-				readfile(fullPath, function (code) {
-					var scriptBegin = preprocess(fullPath, code);
-					code[fullPath] = code.substring(scriptBegin);
+				readfile(fullPath, function (c) {
+					var scriptBegin = preprocess(fullPath, c);
+					code[fullPath] = c.substring(scriptBegin);
 
 					numRemaining--;
 					//CHECK FOR MORE WORK

@@ -10,19 +10,20 @@ var Template = function Template(template){
 };
 
 (function(){
+
 	Template.prototype.expand = function expand(values){
 		if (values === undefined){
 			return this.template;
 		}//endif
-		var map = {};
-		if (!(values instanceof Array)) {
-			var keys = Object.keys(values);
-			keys.forall(function(k){
-				map[k.toLowerCase()] = values[k];
+
+		var map = values;
+		if (typeof(values)=="object" && !(values instanceof Array) && !(values instanceof Date)) {
+			var newMap = {};
+			Map.forall(values, function(k, v){
+				newMap[k.toLowerCase()]=v;
 			});
+			map = newMap;
 		}//endif
-		//ADD RELATIVE REFERENCES
-		map["."] = values;
 
 		return _expand(this.template, [map]);
 	};
@@ -59,7 +60,10 @@ var Template = function Template(template){
 	FUNC.quote = function(value){
 		return convert.value2quote(value);
 	};
-
+	FUNC.format = function(value, format){
+		return Date.newInstance(value).format(format);
+	};
+	FUNC.round = aMath.round;
 
 	function _expand(template, namespaces){
 		if (template instanceof Array) {
@@ -85,16 +89,14 @@ var Template = function Template(template){
 			Log.error("expecting from clause to be string");
 		}//endif
 
-		return namespaces[0][loop.from].map(function(m, i, all){
+		return Map.get(namespaces[0], loop.from).map(function(m){
 			var map = Map.copy(namespaces[0]);
+			map["."] = m;
 			if (m instanceof Object && !(m instanceof Array)) {
-				var keys = Object.keys(m);
-				keys.forall(function(k){
-					map[k.toLowerCase()] = m[k];
+				Map.forall(m, function(k, v){
+					map[k.toLowerCase()] = v;
 				});
 			}//endif
-			//ADD RELATIVE REFERENCES
-			map["."] = m;
 			namespaces.forall(function(n, i){
 				map[Array(i + 3).join(".")] = n;
 			});
@@ -117,8 +119,8 @@ var Template = function Template(template){
 			if (s < 0) return output;
 			var e = output.indexOf('}}', s);
 			if (e < 0) return output;
-			var path = output.substring(s + 2, e).toLowerCase().split("|");
-			var key = path[0];
+			var path = output.substring(s + 2, e).split("|");
+			var key = path[0].toLowerCase();
 			var val = Map.get(map, key);
 			for (var p = 1; p < path.length; p++) {
 				var func = path[p].split("(")[0];
