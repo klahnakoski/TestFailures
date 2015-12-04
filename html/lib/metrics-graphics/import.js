@@ -1,15 +1,6 @@
 importScript([
-
-    //<link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300,700' rel='stylesheet' type='text/css'>
-    //<link href='https://fonts.googleapis.com/css?family=PT+Serif:400,700,400italic' rel='stylesheet' type='text/css'>
-    //'https://netdna.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.css',
-    //'https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css',
     'dist/metricsgraphics.css',
-    //<link href='css/metricsgraphics-demo.css' rel='stylesheet' type='text/css' id='light'>
-
-
-
-    'https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.js',
+    '../jquery.js',
     'https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.0/d3.min.js',
 	"src/js/MG.js",
 	"src/js/common/register.js",

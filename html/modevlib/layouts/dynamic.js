@@ -62,7 +62,9 @@ $(document).ready(function () {
 			//CLEANUP
 			self.removeClass(INDICATOR_CLASS).removeAttr("style").removeAttr("dynamic-style");
 		});
-		$("head").append('"<style type="text/css">' + styles.join("\n") + "</style>");
+		if (styles.length>0) {
+			$("head").append('"<style type="text/css">' + styles.join("\n") + "</style>");
+		}//endif
 		return this;
 	}
 

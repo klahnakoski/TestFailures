@@ -26,7 +26,7 @@ var add_remove_button = function(element){
 	var show_id = "show_" + rawID;
 
 	var BUTTON = new Template(
-		'<div id="{{show_id|quote}}" layout="tl=..tl;br=..br" style="display:none;" dynamicStyle=":hover={background_color:red}">' +
+		'<div id={{show_id|quote}} layout="tl=..tl;br=..br" style="display:none;" dynamic-style=":hover={z-index=-1;background-color:rgba(255, 0, 0, 0.5);display:block;}">' +
 		'<div id={{id|quote}} layout="mr=..mr" style="height:20px;width=20px;">' +
 		'<img src="images/x-3x.png">' +
 		'</div>' +
@@ -38,7 +38,7 @@ var add_remove_button = function(element){
 	$("#"+id).click(function(e){
 		var self = $(this);
 		var text = self.parent().text();
-		var column =
+		//var column =
 		window.exclude = Array.union(window.exclude, [text]);
 		//REMOVE ALL ROWS WITH GIVEN text
 
@@ -47,9 +47,9 @@ var add_remove_button = function(element){
 	});
 
 	// SHOW BUTTON DURING HOVER
-	element.hover(function(e){
+	element.hover(function(){
 		$("#"+show_id).show();
-	}, function(e){
+	}, function(){
 		$("#"+show_id).hide();
 	});
 
