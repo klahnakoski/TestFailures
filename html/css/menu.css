@@ -190,6 +190,10 @@ mstyle{
 	background-color: #fafaba;
 }
 
+.deletable:hover {
+	background-color: #fababa;
+}
+
 
 .items {
     border-bottom: 1px black solid;

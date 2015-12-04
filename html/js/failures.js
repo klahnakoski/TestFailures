@@ -17,40 +17,59 @@ var tests = {};  //MAP FROM FULL NAME TO UNIQUE TEST
 window.exclude = [];  //STUFF TO IGNORE
 
 
+function addExclusion(column, removeText){
+	$("#removes").append('<div class="removable">'+removeText+'</div>');
+}//function
 
 
 var add_remove_button = function(element){
 //	element = $(element);
 	var rawID = Util.UID();
 	var id = "remove_" + rawID;
-	var show_id = "show_" + rawID;
 
 	var BUTTON = new Template(
-		'<div id={{show_id|quote}} layout="tl=..tl;br=..br" style="display:none;" dynamic-style=":hover={z-index=-1;background-color:rgba(255, 0, 0, 0.5);display:block;}">' +
-		'<div id={{id|quote}} layout="mr=..mr" style="height:20px;width=20px;">' +
+		'<div id={{id|quote}} layout="mr=..mr" style="display:none;height:20px;width=25px;padding-right: 5px">' +
 		'<img src="images/x-3x.png">' +
-		'</div>' +
 		'</div>'
 	);
-	element.append(BUTTON.expand({"id": id, "show_id": show_id}));
+	element.append(BUTTON.expand({"id": id}));
 
 	// CLICK WILL ADD RESULTS TO EXCLUDE LIST
 	$("#"+id).click(function(e){
 		var self = $(this);
-		var text = self.parent().text();
-		//var column =
-		window.exclude = Array.union(window.exclude, [text]);
-		//REMOVE ALL ROWS WITH GIVEN text
+		var removeText = self.parent().text();
+		var column = self.parent().attr("columnName");
+
+		var exclude = Session.get("exclude");
+		if (!exclude.contains(removeText)) {
+			exclude.append(removeText);
+		}//endif
 
 		//ADD REMOVE TO URL
+		Session.URL.set("exclude", exclude);
+
+		//REMOVE ALL ROWS WITH GIVEN removeText
+		$("#details").find("tr").each(function(){
+			var self=$(this);
+			var text=self.text();
+
+			if (Array.OR(exclude.map(function(e){
+				return text.indexOf(e)>0;
+			}))){
+				self.hide();
+			}//endif
+		});
+
 		//ADD REMOVE TO LIST OF REMOVES
+		addExclusion(column, removeText);
+		e.stopPropagation();
 	});
 
 	// SHOW BUTTON DURING HOVER
 	element.hover(function(){
-		$("#"+show_id).show();
+		$("#"+id).show();
 	}, function(){
-		$("#"+show_id).hide();
+		$("#"+id).hide();
 	});
 
 	$(element).updateDynamic();
@@ -239,10 +258,10 @@ function showFailureTable(testGroups){
 		'<td>{{score}}</td>' +
 		'<td>{{last_fail|datetime}}</td>' +
 		'<td>{{failure_count|html}}</td>' +
-		'<td columnName="run.suite">{{suite|html}}</td>' +
-		'<td columnName="result.test">{{test|html}}</td>' +
-		'<td columnName="build.platform">{{platform|html}}</td>' +
-		'<td columnName="build.type">{{build_type|html}}</td>' +
+		'<td columnName="run.suite" class="deletable">{{suite|html}}</td>' +
+		'<td columnName="result.test" class="deletable">{{test|html}}</td>' +
+		'<td columnName="build.platform" class="deletable">{{platform|html}}</td>' +
+		'<td columnName="build.type" class="deletable">{{build_type|html}}</td>' +
 		'<td style="width:200px;">{{subtests|json|html}}</td>' +
 		'</tr>'
 	);

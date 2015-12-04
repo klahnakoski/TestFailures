@@ -88,16 +88,13 @@ var convert = function(){
 		}//try
 	};//method
 
-
 	convert.Map2Style = function(map){
 		return Map.map(map, function(k, v){
 				return k + ":" + v;
 			}).join(";") + ";";
 	};//method
 
-
-	convert.value2json = function value2json(json){
-//	return JSON.stringify(json);
+	function value2json(json){
 		if (json instanceof Array) {
 			try {
 				var singleLine = JSON.stringify(json);
@@ -119,12 +116,6 @@ var convert = function(){
 			return convert.String2Quote(json.toString());
 		} else if (json instanceof Date) {
 			return convert.String2Quote(json.format("dd-NNN-yyyy HH:mm:ss"));
-//	}else if (typeof(json)=="string"){
-//		var s=convert.String2Quote(json);
-//		if (json.length>30 && json.indexOf("\n")>0){
-//			s=s.replaceAll("\\n", "\\n\"+\n\"");
-//		}//endif
-//		return s;
 		} else if (json instanceof Object) {
 			try {
 				var singleLine = JSON.stringify(json);
@@ -149,23 +140,11 @@ var convert = function(){
 
 			}//for
 			return output + "\n}";
-
-//		return "{\n\t"+Map.map(json, function(k, v){
-//			if (v===undefined) return "";
-//			return "\""+k+"\":"+convert.value2json(v).indent(1).trim();
-//		}).join(",\n\t")+"\n}";
-//TOO BAD: CAN NOT PROVIDE FORMATTED STRINGS
-//	}else if (typeof(json)=="string"){
-//		var output=JSON.stringify(json);
-//		if (json.length>40 && json.indexOf("\n")>=0){
-//			return "\n\t"+output.split("\\n").join("\\n\"+\n\t\"");
-//		}else{
-//			return output;
-//		}//endif
 		} else {
 			return JSON.stringify(json);
 		}//endif
-	};//method
+	}//function
+	convert.value2json = value2json;
 
 
 	convert.Object2CSS = function(value){
@@ -289,7 +268,15 @@ var convert = function(){
 
 		convert.Object2URLParam = function(value){
 			return Map.map(value, function(k,v){
-				if (v instanceof Array || isObject(v)){
+				if (v instanceof Array){
+					return v.map(function(vv){
+						if (isString(vv)){
+							return k.escape(urlMap)+"="+vv.escape(urlMap);
+						}else{
+							return k.escape(urlMap)+"="+value2json(vv).escape(urlMap);
+						}//endif
+					}).join("&");
+				}else if (isObject(v)){
 					return k.escape(urlMap)+"="+value2json(v).escape(urlMap);
 				}else{
 					return k.escape(urlMap)+"="+(""+v).escape(urlMap);
