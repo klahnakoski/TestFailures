@@ -1198,7 +1198,6 @@ Qb.domain.set.compileMappedLookup2 = function(column, d, sourceColumns, lookupVa
 };
 
 
-
 Qb.domain.set.compileKey=function(domain){
 	if (domain.key === undefined) domain.key = "value";
 	var key=domain.key;

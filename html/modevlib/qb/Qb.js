@@ -163,8 +163,6 @@ function* calc2Matrix(query){
 	//RETURN ObjectWITH Matrix VALUES
 	if (query.edges.length == 0)
 		Log.error("Tree processing requires an edge");
-	if (query.where=="bug!=null")
-		Log.note("");
 
 	var sourceColumns  = yield (Qb.getColumnsFromQuery(query));
 	if (sourceColumns===undefined){
@@ -173,6 +171,7 @@ function* calc2Matrix(query){
 	var from = query.from.list;
 
 	query.columns = Qb.compile(query, sourceColumns);
+
 	//ASSIGN dataIndex TO ALL PARTITIONS
 	var edges = query.edges;
 	edges.forall(function(edge){
@@ -190,12 +189,16 @@ function* calc2Matrix(query){
 		return [s.name, new Matrix({"dim":shape, "constructor":s.defaultValue})];
 	}));
 
+	var where = Qb.where.compile(coalesce(query.where, query.esfilter), sourceColumns, query.edges);
+
 	for(var f=from.length;f--;){
 		if (f%1000==0) {
 			yield (Thread.yield());
 		}//endif
 
 		var row = from[f];
+		if (!where(row, f, from)) continue;
+
 		var coord = edges.map(function(e){
 			var v = e.calc(row);
 
@@ -420,12 +423,14 @@ function* calc2Cube(query){
 	}//endif
 
 	if (query.meta){
+		var output;
 		if (query.meta.format=="cube") {
-			query.data = yield (calc2Matrix(query));
-			Map.set(output, "meta.format", "cube");
-			yield (query);
+			output = Map.copy(query, {"meta":{"format":"cube"}});
+			output.data = yield (calc2Matrix(output));
+
+			yield (output);
 		}else if (query.meta.format=="list"){
-			var output = yield (Qb.calc2List(query));
+			output = yield (Qb.calc2List(query));
 			output.data = output.list;
 			Map.set(output, "meta.format", "list");
 			yield (output);

@@ -29,29 +29,6 @@ var convert = function(){
 	};//method
 
 
-//MVEL.esFacet2List = function(esFacet){
-//	if (esFacet._type == "terms_stats") return esFacet.terms;
-//
-//	if (!(esFacet.terms === undefined)){
-//		//ASSUME THE .term IS JSON OBJECT WITH ARRAY OF RESULT OBJECTS
-//		var output = [];
-//		var list = esFacet.terms;
-//		for(var i = 0; i < list.length; i++){
-//			var esRow = list[i];
-//			var values = convert.json2value(esRow.term);
-//			for(var v = 0; v < (values).length; v++){
-//				values[v].count = esRow.count;
-//				output.push(values[v]);
-//			}//for
-//		}//for
-//		return output;
-//	} else if (!(esFacet.entries === undefined)){
-//		return esFacet.entries;
-//	}//endif
-//
-//};//method
-
-
 	convert.ESResult2HTMLSummaries = function(esResult){
 		var output = "";
 
@@ -88,61 +65,68 @@ var convert = function(){
 		}//try
 	};//method
 
+	/**
+	 * @return {string} CSS style
+	 */
 	convert.Map2Style = function(map){
 		return Map.map(map, function(k, v){
-				return k + ":" + v;
-			}).join(";") + ";";
+					return k + ":" + v;
+				}).join(";") + ";";
 	};//method
 
 	function value2json(json){
-		if (json instanceof Array) {
-			try {
-				var singleLine = JSON.stringify(json);
-				if (singleLine.length < 60) return singleLine;
-			} catch (e) {
-				Log.warning("Problem turning array to json:", e);
-			}//try
+		try {
+			if (json instanceof Array) {
+				try {
+					var singleLine = JSON.stringify(json);
+					if (singleLine.length < 60) return singleLine;
+				} catch (e) {
+					Log.warning("Problem turning array to json:", e);
+				}//try
 
-			if (json.length == 0) return "[]";
-			if (json.length == 1) return "[" + convert.value2json(json[0]) + "]";
+				if (json.length == 0) return "[]";
+				if (json.length == 1) return "[" + convert.value2json(json[0]) + "]";
 
-			return "[\n" + json.map(function(v, i){
-					if (v === undefined) return "undefined";
-					return convert.value2json(v).indent(1);
-				}).join(",\n") + "\n]";
-		} else if (typeof(json) == "function") {
-			return "undefined";
-		} else if (json instanceof Duration) {
-			return convert.String2Quote(json.toString());
-		} else if (json instanceof Date) {
-			return convert.String2Quote(json.format("dd-NNN-yyyy HH:mm:ss"));
-		} else if (json instanceof Object) {
-			try {
-				var singleLine = JSON.stringify(json);
-				if (singleLine.length < 60) return singleLine;
-			} catch (e) {
-				Log.warning("Problem turning object to json:", e);
-			}//try
+				return "[\n" + json.map(function(v){
+							if (v === undefined) return "undefined";
+							return convert.value2json(v).indent(1);
+						}).join(",\n") + "\n]";
+			} else if (typeof(json) == "function") {
+				return "undefined";
+			} else if (json instanceof Duration) {
+				return convert.String2Quote(json.toString());
+			} else if (json instanceof Date) {
+				return convert.String2Quote(json.format("dd-NNN-yyyy HH:mm:ss"));
+			} else if (json instanceof Object) {
+				try {
+					var singleLine = JSON.stringify(json);
+					if (singleLine.length < 60) return singleLine;
+				} catch (e) {
+					Log.warning("Problem turning object to json:", e);
+				}//try
 
-			var keys = Object.keys(json);
-			if (keys.length == 0) return "{}";
-			if (keys.length == 1) return "{\"" + keys[0] + "\":" + convert.value2json(json[keys[0]]).trim() + "}";
+				var keys = Object.keys(json);
+				if (keys.length == 0) return "{}";
+				if (keys.length == 1) return "{\"" + keys[0] + "\":" + convert.value2json(json[keys[0]]).trim() + "}";
 
-			var output = "{\n\t";
-			for (var k in json) {  //NATURAL ORDER
-				if (keys.contains(k)) {
-					var v = json[k];
-					if (v !== undefined) {
-						if (output.length > 3) output += ",\n\t";
-						output += "\"" + k + "\":" + convert.value2json(v).indent(1).trim();
+				var output = "{\n\t";
+				for (var k in json) {  //NATURAL ORDER
+					if (keys.contains(k)) {
+						var v = json[k];
+						if (v !== undefined) {
+							if (output.length > 3) output += ",\n\t";
+							output += "\"" + k + "\":" + convert.value2json(v).indent(1).trim();
+						}//endif
 					}//endif
-				}//endif
 
-			}//for
-			return output + "\n}";
-		} else {
-			return JSON.stringify(json);
-		}//endif
+				}//for
+				return output + "\n}";
+			} else {
+				return JSON.stringify(json);
+			}//endif
+		} catch(e){
+			Log.error("Problem with jsonification", e);
+		}//try
 	}//function
 	convert.value2json = value2json;
 
@@ -300,6 +284,9 @@ var convert = function(){
 		};
 
 
+		/**
+		 * @return {string} HTML safe string
+		 */
 		convert.String2HTML = function String2HTML(value){
 			if (value == null) return "";
 			return ("" + value).translate(entityMap);
@@ -326,6 +313,9 @@ var convert = function(){
 		return value;
 	};//method
 
+	/**
+	 * @return {string} Javascript quoted for same value
+	 */
 	convert.String2Quote = function(str){
 		return "\"" + (str + '').replaceAll("\n", "\\n").replace(/([\n\t\\"'])/g, "\\$1").replace(/\0/g, "\\0") + "\"";
 	};//method
@@ -342,6 +332,9 @@ var convert = function(){
 	};//method
 
 
+	/**
+	 * @return {string} Javascript code for tha same
+	 */
 	convert.Date2Code = function(date){
 		return "Date.newInstance(" + date.getMilli() + ")";
 	};//method
@@ -422,6 +415,9 @@ var convert = function(){
 	};//method
 
 
+	/**
+	 * @return {string} return integer value found in string
+	 */
 	convert.String2Integer = function(value){
 		if (value === undefined) return undefined;
 		if (value == null || value == "") return null;
@@ -455,6 +451,9 @@ var convert = function(){
 	}//method
 
 
+	/**
+	 * @return {string}
+	 */
 	convert.Pipe2Value = function(value){
 		var type = value.charAt(0);
 		if (type == '0') return null;
@@ -688,23 +687,18 @@ var convert = function(){
 		} else if (value.milli) {
 			//DURATION
 			return prefix + value.toString() + suffix;
-//	} else if (value.toString !== undefined){
-//		return prefix + convert.String2HTML(value.toString()) + suffix;
 		}//endif
 
 		var json = convert.value2json(value);
-//	if (json.indexOf("\n") == -1){
 		return prefix + convert.String2HTML(json) + suffix;
-//	} else{
-//		return "<"+tagName+">&lt;json not included&gt;</"+tagName+">";
-//	}//endif
-	};
+	}//function
 
 
-///////////////////////////////////////////////////////////////////////////////
-// CONVERT TO TAB DELIMITED TABLE
-///////////////////////////////////////////////////////////////////////////////
 	convert.List2Tab = function(data){
+		/**
+		 * CONVERT TO TAB DELIMITED TABLE
+		 * @return {string} simple text table
+		 */
 		var output = "";
 
 		//WRITE HEADER
@@ -729,6 +723,10 @@ var convert = function(){
 // CONVERT TO TAB DELIMITED TABLE
 ///////////////////////////////////////////////////////////////////////////////
 	convert.Table2List = function(table){
+		/**
+		 * CONVERT TO LIST OF OBJECTS
+		 * @return {array}
+		 */
 		var output = [];
 
 		//MAP LIST OF NAMES TO LIST OF COLUMN OBJCETS

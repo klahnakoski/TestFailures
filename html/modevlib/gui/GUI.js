@@ -268,7 +268,7 @@ GUI = {};
 		GUI.State2URL = function () {
 			if (!GUI.State2URL.isEnabled) return;
 
-			var simplestate = {};
+			var simpleState = {};
 			Map.forall(GUI.state, function (k, v) {
 
 				var p = GUI.parameters.map(function (v, i) {
@@ -276,20 +276,20 @@ GUI = {};
 				})[0];
 
 				if (v.isFilter) {
-					simplestate[k] = v.getSimpleState();
+					simpleState[k] = v.getSimpleState();
 				} else if (jQuery.isArray(v)) {
 					if (v.length > 0) {
-						simplestate[k] = v.join(",");
+						simpleState[k] = v.join(",");
 					}else{
-						simplestate[k] = undefined;
+						simpleState[k] = undefined;
 					}//endif
 				} else if (p && p.type == "json") {
 					v = convert.value2json(v);
 					v = v.escape(GUI.urlMap);
-					simplestate[k] = v;
+					simpleState[k] = v;
 				} else if (typeof(v) == "string" || aMath.isNumeric(k)) {
 					v = v.escape(GUI.urlMap);
-					simplestate[k] = v;
+					simpleState[k] = v;
 				}//endif
 			});
 
