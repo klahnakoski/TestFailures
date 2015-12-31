@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 importScript("Dimension.js");
+importScript("qb/Qb.js");
 importScript("qb/ESQuery.js");
 importScript("qb/Qb.js");
 
@@ -18,6 +19,15 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 		"name": "Release",
 		"isFacet": true,
 		"edges": [
+			{
+				"name": "Firefox32",
+				"version": 32,
+				"releaseDate": "2014-09-02",
+				"esfilter": {"and": [
+					{"not": {"terms": {"cf_status_firefox32": SOLVED}}},
+					{"term": {"cf_tracking_firefox32": "+"}}
+				]}
+			},
 			{
 				"name": "Firefox33",
 				"version": 33,
@@ -258,9 +268,11 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 
 				{
 					"name": "ReleaseManagementCategories",
+					"allowNulls": false,
 					"partitions": [
 						{
 							"name": "Security",
+							//"style":{"color":"#ff7f0e"},
 							"esfilter":{"or":[
 								{"term": {"keywords": "sec-critical"}},
 								{"term": {"keywords": "sec-high"}}
@@ -268,18 +280,19 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 						},
 						{
 							"name": "Stability",
-							"style": {"color": "#777777"},
+							//"style": {"color":"#2ca02c"},
 							"esfilter": {"or":[
 								{"prefix": {"keywords": "topcrash"}},
-								{"prefix": {"keyaords": "crash"}}
+								{"prefix": {"keywords": "crash"}}
 							]}
 						},
 						{
 							"name": "Regressions",
-							"columnName": "priority",
-							"esfilter":	{"term": {"keywords": "regression"}}
+							//"style": {"color": "#d62728"},
+							"esfilter": {"term": {"keywords": "regression"}}
 						},
 						{   "name":"other",
+							"style": {"color": "#CCCCCC"},
 							"esfilter": {"match_all":{}}
 						}
 					]

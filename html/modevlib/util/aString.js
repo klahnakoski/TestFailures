@@ -26,6 +26,10 @@ String.trim = function(v){
 
 if (String.prototype.includes) {
 	String.prototype.contains = String.prototype.includes;
+} else if (!String.prototype.contains) {
+	String.prototype.contains = function(substring){
+		return this.indexOf(substring) != -1;
+	};
 }//endif
 
 

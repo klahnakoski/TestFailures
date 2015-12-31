@@ -54,7 +54,7 @@ importScript("../../lib/jquery.js");
 			var xaxis = chartCube.select[0];
 			var yaxis = chartCube.select[1];
 
-			var styles = deepcopy(STYLES);
+			var styles = Map.clone(STYLES);
 
 			if (chartCube.edges.length >= 1) {
 				chartCube.edges[0].domain.partitions.forall(function(p, i){
@@ -173,7 +173,11 @@ importScript("../../lib/jquery.js");
 	};
 
 
-	function deepcopy(value){
-		return convert.json2value(convert.value2json(value));
-	}//function
+	aChart.show = function(params){
+
+
+
+
+	};
+
 })();

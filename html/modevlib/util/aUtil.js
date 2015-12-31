@@ -184,7 +184,6 @@ var Map = {};
 		return true;
 	};//method
 
-
 	var forAllKey = function(map, func){
 		//func MUST ACCEPT key, value PARAMETERS
 		var keys = Object.keys(map);
@@ -255,7 +254,6 @@ var Map = {};
 	};
 
 	Map.getKeys = Object.keys;
-
 
 	Map.isObject = function (val) {
 	    if (val === null) { return false;}
