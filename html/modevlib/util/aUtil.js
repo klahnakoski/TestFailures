@@ -209,7 +209,7 @@ var Map = {};
 	};
 
 
-	Map.map=function mapAllKey(map, func){
+	function mapAllKey(map, func){
 		//func MUST ACCEPT key, value, index PARAMETERS
 		var output = [];
 		var keys = Object.keys(map);
@@ -224,6 +224,7 @@ var Map = {};
 		return output;
 	};
 
+	Map.map=mapAllKey;
 
 	//RETURN ARRAY OF {"key":key, "value":val} PAIRS
 	Map.getItems = function getItems(map){
