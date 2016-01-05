@@ -6,21 +6,44 @@
 <HEAD>
 	<script type="text/javascript" src="modevlib/imports/import.js"></script>
 </HEAD>
-<BODY style="position:relative;">
+<BODY>
 
-<div style="position:absolute;left:10px;right:10px;">
+<div id="sidebar" layout="tl=window.tl;bottom=footer.bottom;" style="width:0;overflow:hidden;">
+	<div class="padding">
+		<div id="description">
+			Team manager dashboard
+		</div>
+		<hr>
+		<div id="last-updated" style="text-align: center;width:300px;"></div>
+		<hr>
+		<div id="filters" style="width:300px;" class="menu">
+		</div>
+		<div id="parameters" style="display:none;">
+		</div>
+	</div>
+</div>
+<div id="sidebar_name" class="sidebar_name" layout="top=window.top;bottom=footer.top;left=sidebar.right;">
+	<div>Configuration</div>
+</div>
+<div id="content" style="padding: 10px" layout="tr=window.tr;left=sidebar_name.right;bottom=footer.top;">
+
 	<h3 id="title">Past week of Test Failures<span id="status" style="height:30px">Page Loading...</span><span class="loading"><img src="images/spinner.gif" alt=""></span></h3>
 
 	<div id="chart" class="chart" style="text-align:center;width:800px;height:300px;"></div>
 	<div id="removes" layout="tl=chart.tr" style="width:300px;padding-left:10px;"><h3 style="text-align:left;">Do not include</h3></div>
-	<div id="details" style="overflow-y: scroll;height:300px;position:absolute;right:10px;left:10px;"></div>
+	<div id="details" style="overflow-y: scroll;height:300px;position:absolute;right:10px;left:10px;">
+	</div>
 </div>
-
+<div id="footer" style="height:50px;text-align: center;padding: 5px 0 5px 0;background-color: #fff;z-index: 12;" layout="bl=window.bl;br=window.br;">
+	Github Issues <a href="https://github.com/klahnakoski/TestFailures/issues/new">https://github.com/klahnakoski/TestFailures/issues/new</a><br>
+	Code <a href="https://github.com/klahnakoski/TestFailures/blob/master/html/failures.html">https://github.com/klahnakoski/TestFailures/blob/master/html/failures.html</a>
+</div>
 
 <script type="application/javascript">
 
 
 importScript(['js/util.js', 'js/failures.js'], function(){
+	layoutAll();
 
 	var DEBUG = true;  // TAKES A SMALLER SAMPLE FOR FASTER ITERATION
 
@@ -32,8 +55,8 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 	});
 
 
-
-	var __main = function*(){
+	var __main = function * ()
+	{
 
 		var raw_failures = null;
 		var success = null;
@@ -57,19 +80,23 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 					{"name": "revision", "value": "build.revision12"},
 					{"name": "ok", "value": "result.ok"}
 				],
-				"where": {"and": [
-					{"gte": {"run.timestamp": RECENT_DATE.unix()}},
-					{"lt": {"run.timestamp": TO_DATE.unix()}},
-					{"eq": {"result.ok": false}},
-					{"eq": {"build.branch": "mozilla-inbound"}},
-					{"and":[
-						{"not": {"in": {"build.type": exclude}}},
-						{"not": {"in": {"build.platform": exclude}}},
-						{"not": {"in": {"build.branch": exclude}}},
-						{"not": {"in": {"build.test": exclude}}},
-						{"not": {"in": {"build.suite": exclude}}}
-					]}
-				]},
+				"where": {
+					"and": [
+						{"gte": {"run.timestamp": RECENT_DATE.unix()}},
+						{"lt": {"run.timestamp": TO_DATE.unix()}},
+						{"eq": {"result.ok": false}},
+						{"eq": {"build.branch": "mozilla-inbound"}},
+						{
+							"and": [
+								{"not": {"in": {"build.type": exclude}}},
+								{"not": {"in": {"build.platform": exclude}}},
+								{"not": {"in": {"build.branch": exclude}}},
+								{"not": {"in": {"build.test": exclude}}},
+								{"not": {"in": {"build.suite": exclude}}}
+							]
+						}
+					]
+				},
 				"limit": (DEBUG ? 100 : 100000),
 				"format": "list"
 			}));
@@ -118,7 +145,8 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 		}//try
 
 		yield (null);
-	};
+	}
+	;
 
 
 	Thread.showWorking = function(numThread){
