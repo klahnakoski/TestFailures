@@ -104,12 +104,6 @@ var convert = function(){
 				return convert.String2Quote(json.toString());
 			} else if (json instanceof Date) {
 				return convert.String2Quote(json.format("dd-NNN-yyyy HH:mm:ss"));
-//	}else if (typeof(json)=="string"){
-//		var s=convert.String2Quote(json);
-//		if (json.length>30 && json.indexOf("\n")>0){
-//			s=s.replaceAll("\\n", "\\n\"+\n\"");
-//		}//endif
-//		return s;
 			} else if (json instanceof Object) {
 				try {
 					var singleLine = JSON.stringify(json);
@@ -134,19 +128,6 @@ var convert = function(){
 
 				}//for
 				return output + "\n}";
-
-//		return "{\n\t"+Map.map(json, function(k, v){
-//			if (v===undefined) return "";
-//			return "\""+k+"\":"+_value2json(v).indent(1).trim();
-//		}).join(",\n\t")+"\n}";
-//TOO BAD: CAN NOT PROVIDE FORMATTED STRINGS
-//	}else if (typeof(json)=="string"){
-//		var output=JSON.stringify(json);
-//		if (json.length>40 && json.indexOf("\n")>=0){
-//			return "\n\t"+output.split("\\n").join("\\n\"+\n\t\"");
-//		}else{
-//			return output;
-//		}//endif
 			} else {
 				return JSON.stringify(json);
 			}//endif

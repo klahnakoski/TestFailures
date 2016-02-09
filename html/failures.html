@@ -11,10 +11,14 @@
 <div id="sidebar" layout="tl=window.tl;bottom=footer.bottom;" style="width:0;overflow:hidden;">
 	<div class="padding">
 		<div id="description">
-			Team manager dashboard
+			This dashboard charts test durations by push date.
+			The text box can be used for searching.
+			<ul>
+				<li>Blue - Successful</li>
+				<li>Orange - Test Failure</li>
+				<li>Red - Timeout (duration = -1 second)</li>
+			</ul>
 		</div>
-		<hr>
-		<div id="last-updated" style="text-align: center;width:300px;"></div>
 		<hr>
 		<div id="filters" style="width:300px;" class="menu">
 		</div>
@@ -26,13 +30,19 @@
 	<div>Configuration</div>
 </div>
 <div id="content" style="padding: 10px" layout="tr=window.tr;left=sidebar_name.right;bottom=footer.top;">
-
-	<h3 id="title">Past week of Test Failures<span id="status" style="height:30px">Page Loading...</span><span class="loading"><img src="images/spinner.gif" alt=""></span></h3>
-
-	<div id="chart" class="chart" style="text-align:center;width:800px;height:300px;"></div>
-	<div id="removes" layout="tl=chart.tr" style="width:300px;padding-left:10px;"><h3 style="text-align:left;">Do not include</h3></div>
-	<div id="details" style="overflow-y: scroll;height:300px;position:absolute;right:10px;left:10px;">
+	<div style="font-size: 2em;"> Search for test:
+		<form action="javascript:onChange()" style="display:inline-block;">
+			<input id="search" class="widget" style="width: 30em;height:1.4em;" type="text">
+		</form>
+		<span id="num_found" style="font-size: 0.7em"></span>
 	</div>
+
+	<div id="status" style="height:30px" layout="tr=window.tr">
+		Page Loading...
+		<span class="loading"><img src="images/spinner.gif" alt=""></span>
+	</div>
+
+	<div id="charts"></div>
 </div>
 <div id="footer" style="height:50px;text-align: center;padding: 5px 0 5px 0;background-color: #fff;z-index: 12;" layout="bl=window.bl;br=window.br;">
 	Github Issues <a href="https://github.com/klahnakoski/TestFailures/issues/new">https://github.com/klahnakoski/TestFailures/issues/new</a><br>
@@ -40,114 +50,18 @@
 </div>
 
 <script type="application/javascript">
-
-
 importScript(['js/util.js', 'js/failures.js'], function(){
 	layoutAll();
-
-	var DEBUG = true;  // TAKES A SMALLER SAMPLE FOR FASTER ITERATION
+	sidebarSlider();
+	Log.actionDone();
 
 	var params = Session.URL.getFragment();
-	var exclude = Array.newInstance(params.exclude);
-	Session.set("exclude", exclude);
-	exclude.forall(function(e){
-		addExclusion(null, e);
+
+	$("#search").keyup(function(){
+		var terms = $("#search").val();
+		_search(terms);
 	});
-
-
-	var __main = function * ()
-	{
-
-		var raw_failures = null;
-		var success = null;
-
-		var a = Log.action("find test failures", true);
-		try {
-			//PULL FAILURE DETAILS
-			var result = yield (search({
-//				"from": "unittest.result.subtests",
-				"from": "unittest",
-				"select": [
-					"_id",
-					{"name": "suite", "value": "run.suite"},
-					{"name": "chunk", "value": "run.chunk"},
-					{"name": "duration", "value": "result.duration"},
-					{"name": "test", "value": "result.test"},
-					{"name": "platform", "value": "build.platform"},
-					{"name": "build_type", "value": "build.type"},
-					{"name": "build_date", "value": "build.date"},
-					{"name": "branch", "value": "build.branch"},
-					{"name": "revision", "value": "build.revision12"},
-					{"name": "ok", "value": "result.ok"}
-				],
-				"where": {
-					"and": [
-						{"gte": {"run.timestamp": RECENT_DATE.unix()}},
-						{"lt": {"run.timestamp": TO_DATE.unix()}},
-						{"eq": {"result.ok": false}},
-						{"eq": {"build.branch": "mozilla-inbound"}},
-						{
-							"and": [
-								{"not": {"in": {"build.type": exclude}}},
-								{"not": {"in": {"build.platform": exclude}}},
-								{"not": {"in": {"build.branch": exclude}}},
-								{"not": {"in": {"build.test": exclude}}},
-								{"not": {"in": {"build.suite": exclude}}}
-							]
-						}
-					]
-				},
-				"limit": (DEBUG ? 100 : 100000),
-				"format": "list"
-			}));
-
-			raw_failures = result.data;
-		} catch (e) {
-			Log.error("Problem collecting test failures from ActiveData", e);
-		} finally {
-			Log.actionDone(a);
-		}//try
-
-		addGroupId(result, ["suite", "test", "platform", "build_type"]);
-
-		Log.alert(raw_failures.length + " failures found since " + RECENT_DATE.format("MMM dd, yyyy"));
-
-		a = Log.action("calculating...", true);
-		try {
-			var testGroups = (yield (Qb.calc2List({
-				"from": raw_failures,
-				"select": [
-//					{"name": "subtests", "value": "subtest_name", "aggregate": "union"},
-					{"name": "last_fail", "value": "build_date", "aggregate": "max"},
-					{"name": "details", "value": ".", "aggregate": "list"},
-					{"value": "_group_id", "aggregate": "one"},
-					{"name": "failure_count", "value": ".", "aggregate": "count"}
-				],
-				"edges": ["suite", "test", "platform", "build_type"]
-			}))).list;
-
-			Log.alert(testGroups.length + " unique combinations");
-
-			tests = Map.zip(testGroups.map(function(t){
-				return [t._group_id, t];
-			}));
-
-			testGroups = (yield (Qb.calc2List({
-				"from": testGroups,
-				"where": (DEBUG ? true : {"gt": {"failure_count": 1}}),
-				"sort": {"value": "failure_count", "sort": -1}
-			}))).list;
-
-			showFailureTable(testGroups);
-
-		} finally {
-			Log.actionDone(a);
-		}//try
-
-		yield (null);
-	}
-	;
-
+	$("#search").focus();
 
 	Thread.showWorking = function(numThread){
 		var l = $(".loading");
@@ -158,20 +72,6 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 		var l = $(".loading");
 		l.hide();
 	};//function
-
-
-	var thread;
-	var main = function(){
-		if (thread !== undefined)
-			thread.kill();
-		thread = Thread.run(__main());
-//		thread = Thread.run(__testChart());
-	};
-
-	$(document).ready(function(){
-		main();
-	});
-
 });
 
 </script>

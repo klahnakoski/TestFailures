@@ -63,6 +63,9 @@ var Template = function Template(template){
 	FUNC.format = function(value, format){
 		return Date.newInstance(value).format(format);
 	};
+	FUNC.comma = function(value){
+		return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");  //Snagged from http://stackoverflow.com/questions/2901102/how-to-print-a-number-with-commas-as-thousands-separators-in-javascript
+	};
 	FUNC.round = aMath.round;
 
 	function _expand(template, namespaces){

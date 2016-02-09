@@ -260,21 +260,23 @@ var Log = new function(){
 
 
 	Log.actionDone=function(action){
-		action.end=Date.now();
+		if (action){
+			action.end=Date.now();
 
-		if (Log.actionStack.length==0) {
-			$("#status").html("Done");
-			return;
+			if (Log.actionStack.length==0) {
+				$("#status").html("Done");
+				return;
+			}//endif
+
+			var i=Log.actionStack.indexOf(action);
+			if (i>=0) Log.actionStack.splice(i, 1);
+
+			Log.note({
+				"type":"timer.stop",
+				"timestamp":action.end,
+				"message":action.message+" ("+action.end.subtract(action.start).floor(Duration.SECOND).toString()+")"
+			});
 		}//endif
-
-		var i=Log.actionStack.indexOf(action);
-		if (i>=0) Log.actionStack.splice(i, 1);
-
-		Log.note({
-			"type":"timer.stop",
-			"timestamp":action.end,
-			"message":action.message+" ("+action.end.subtract(action.start).floor(Duration.SECOND).toString()+")"
-		});
 
 		if (Log.actionStack.length==0){
 			$("#status").html("Done");

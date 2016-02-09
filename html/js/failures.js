@@ -5,95 +5,161 @@ importScript("../modevlib/layouts/layout.js");
 importScript("../modevlib/collections/aMatrix.js");
 
 
-var FAIL_PREFIX = "failure_";
-var currentClicker=null;
-var FROM_DATE = Date.today().subtract(Duration.WEEK);
-var RECENT_DATE = Date.today().subtract(Duration.DAY);
+var RECENT_DATE = Date.today().subtract(Duration.WEEK);
 var TO_DATE = Date.now().floor(Duration.DAY);
-var NOW = Date.now();
-var REMOVE_BUTTON_CLASS = "x";
 
-var tests = {};  //MAP FROM FULL NAME TO UNIQUE TEST
-window.exclude = [];  //STUFF TO IGNORE
+var MAX_TESTS_PER_PAGE = 20;
 
 
-function addExclusion(column, removeText){
-	$("#removes").append('<div class="removable">'+removeText+'</div>');
+var _search;
+
+(function(){
+	var cache={};
+	var currentThread=null;
+	var launched=false;
+
+	var parse=function(terms){
+		return terms.split(" ").map(function(s){return s.trim().length<2 ? undefined : s.trim();});
+	};//function
+
+	_search=function(terms){
+		$("#num_found").html("");
+		if (parse(terms).length<2) return;  // TOO SHORT
+		if (currentThread && !launched) currentThread.kill(); //DO NOT GENERATE TOO MANY REQUESTS
+
+		launched = false;
+		currentThread = Thread.run(function*(){
+			yield (Thread.sleep(300));  //DO NOT START TOO SOON
+			launched = true;   // NOW THAT WE STARTED, DO NOT CANCEL
+			var dimensions = cache[terms];
+			if (!dimensions) {
+				var words = parse(terms);
+
+				var filter = {"and": ["build.type", "build.platform", "build.branch", "build.test", "build.suite"].map(function(k){
+					return {"or": words.map(function(w){
+						return {"regex": Map.newInstance(k, ".*" + w + ".*")};
+					})};
+				})};
+
+				var action=Log.action("Searching...", true);
+				try {
+					dimensions = yield (search({
+						"from": "unittest",
+						"select": [
+							{"name": "suite", "value": "run.suite", "aggregate": "cardinality"},
+							{"name": "test", "value": "result.test", "aggregate": "cardinality"},
+							{"name": "platform", "value": "build.platform", "aggregate": "cardinality"},
+							{"name": "build_type", "value": "build.type", "aggregate": "cardinality"},
+							{"name": "branch", "value": "build.branch", "aggregate": "cardinality"}
+						],
+						"where": {
+							"and": [
+								{"gte": {"run.timestamp": RECENT_DATE.unix()}},
+								{"lt": {"run.timestamp": TO_DATE.unix()}},
+								filter
+							]
+						},
+						"limit": 10000,
+						"format": "list"
+					}));
+					cache[terms] = dimensions;
+				}finally {
+					Log.actionDone(action);
+				}//try
+			}//endif
+
+			var counts = dimensions.data;
+			var estimate_total = Math.max(counts.suite, counts.test) * counts.platform * counts.build_type * counts.branch;
+
+			if (Thread.currentThread==currentThread){
+				$("#num_found").html(new Template("approximately {{estimate|comma}} matches so far").expand({"estimate": estimate_total}));
+				if (estimate_total <= MAX_TESTS_PER_PAGE){
+					yield showAll(filter, dimensions);
+				}//endif
+			}//endif
+			yield (null);
+		});
+	};//function
+})();
+
+
+function showAll(filter, dimensions){
+	//WHAT DIMENSION ARE WE SHOWING?
+	var partitions = yield (search({
+		"from": "unittest",
+		"groupby":[
+			{"name": "suite", "value": "run.suite"},
+			{"name": "test", "value": "result.test"},
+			{"name": "platform", "value": "build.platform"},
+			{"name": "build_type", "value": "build.type"},
+			{"name": "branch", "value": "build.branch"}
+		],
+		"where": {
+			"and": [
+				{"gte": {"run.timestamp": RECENT_DATE.unix()}},
+				{"lt": {"run.timestamp": TO_DATE.unix()}},
+				filter
+			]
+		},
+		"limit": 1000,
+		"format": "list"
+	}));
+
+	var CHART_TEMPLATE = new Template('<div id="chart{{num}}" class="chart"></div>');
+	var chartArea = $("#charts");
+	chartArea.html("");
+	partitions.data.forall(function(combo, i){
+		chartArea.append(CHART_TEMPLATE.expand({"num": i}));
+		//PULL DATA AND SHOW CHART
+		(function(i){
+			Thread.run(function*(){
+				showOne("chart"+i, combo);
+			});
+		})(i);
+	});
 }//function
 
 
-var add_remove_button = function(element){
-//	element = $(element);
-	var rawID = Util.UID();
-	var id = "remove_" + rawID;
-
-	var BUTTON = new Template(
-		'<div id={{id|quote}} layout="mr=..mr" style="display:none;height:20px;width=25px;padding-right: 5px">' +
-		'<img src="images/x-3x.png">' +
-		'</div>'
-	);
-	element.append(BUTTON.expand({"id": id}));
-
-	// CLICK WILL ADD RESULTS TO EXCLUDE LIST
-	$("#"+id).click(function(e){
-		var self = $(this);
-		var removeText = self.parent().text();
-		var column = self.parent().attr("columnName");
-
-		var exclude = Session.get("exclude");
-		if (!exclude.contains(removeText)) {
-			exclude.append(removeText);
-		}//endif
-
-		//ADD REMOVE TO URL
-		Session.URL.set("exclude", exclude);
-
-		//REMOVE ALL ROWS WITH GIVEN removeText
-		$("#details").find("tr").each(function(){
-			var self=$(this);
-			var text=self.text();
-
-			if (Array.OR(exclude.map(function(e){
-				return text.indexOf(e)>0;
-			}))){
-				self.hide();
-			}//endif
-		});
-
-		//ADD REMOVE TO LIST OF REMOVES
-		addExclusion(column, removeText);
-		e.stopPropagation();
-	});
-
-	// SHOW BUTTON DURING HOVER
-	element.hover(function(){
-		$("#"+id).show();
-	}, function(){
-		$("#"+id).hide();
-	});
-
-	$(element).updateDynamic();
-};
-
-
-var chart = function*(testGroup){
-
-	var a = Log.action("Wait for detailed data", true);
+function showOne(div_id, group){
+	var a = Log.action("find test results", true);
 	try {
-		if (testGroup.thread !== undefined) {
-			yield (Thread.join(testGroup.thread));
-		}//endif
-	}catch (e){
-		Log.warning("chart cancelled", e);
+		//PULL FAILURE DETAILS
+		var result = yield (search({
+			"from": "unittest",
+			"select": [
+				"_id",
+				{"name": "suite", "value": "run.suite"},
+				{"name": "chunk", "value": "run.chunk"},
+				{"name": "duration", "value": "result.duration"},
+				{"name": "test", "value": "result.test"},
+				{"name": "platform", "value": "build.platform"},
+				{"name": "build_type", "value": "build.type"},
+				{"name": "build_date", "value": "build.date"},
+				{"name": "branch", "value": "build.branch"},
+				{"name": "revision", "value": "build.revision12"},
+				{"name": "ok", "value": "result.ok"}
+			],
+			"where": {
+				"and": [
+					{"gte": {"run.timestamp": RECENT_DATE.unix()}},
+					{"lt": {"run.timestamp": TO_DATE.unix()}},
+					{"eq": group}
+				]
+			},
+			"limit": (DEBUG ? 100 : 100000),
+			"format": "list"
+		}));
+	} catch (e) {
+		Log.error("Problem collecting test results from ActiveData", e);
 	} finally {
-		Log.actionDone(a)
+		Log.actionDone(a);
 	}//try
 
 	a = Log.action("Make chart", true);
 	try {
 		//SORT REVISIONS BY build_date
 		var revisions = (yield(Qb.calc2List({
-			"from": testGroup.details,
+			"from": result.data,
 			"select": {"value": "build_date", "aggregate": "min"},
 			"edges": ["revision"],
 			"sort": "build_date"
@@ -101,7 +167,7 @@ var chart = function*(testGroup){
 		revisions = revisions.list.select("revision");
 
 		var duration = (yield(Q({
-			"from": testGroup.details,
+			"from": result.data,
 			"select": [
 				{"name":"build_date", "value": "Date.newInstance(build_date)", "aggregate": "min"},
 				{"name": "duration", "value": "((build_date!=null && duration==null) ? -1 : duration)", "aggregate": "average"}
@@ -129,7 +195,7 @@ var chart = function*(testGroup){
 		});
 
 		aChart.showScatter({
-			"target": "chart",
+			"target": div_id,
 			"hover":{"format":{
 				"x": "{{.|format('NNN dd, HH:mm')}}",
 				"y": ", duration={{.|round(1)}}sec"
@@ -140,175 +206,32 @@ var chart = function*(testGroup){
 	} finally {
 		Log.actionDone(a);
 	}//try
-};//function
 
-// ALL TESTS RESULTS FOR TESTS IN LIST testGroups
-var getDetails = function*(group, testGroups){
-	var a = Log.action("get details #" + group, true);
-	try {
-		//PULL SUCCESS
-		var success = yield (search({
-			"from": "unittest",
-			"select": [
-				"_id",
-				{"name": "duration", "value": "result.duration"},
-				{"name": "suite", "value": "run.suite"},
-				{"name": "chunk", "value": "run.chunk"},
-				{"name": "test", "value": "result.test"},
-				{"name": "platform", "value": "build.platform"},
-				{"name": "build_type", "value": "build.type"},
-				{"name": "build_date", "value": "build.date"},
-				{"name": "branch", "value": "build.branch"},
-				{"name": "revision", "value": "build.revision12"},
-				{"name": "ok", "value": "result.ok"}
-			],
-			"where": {"and": [
-				{"gte": {"build.date": FROM_DATE.unix()}},
-				{"lt": {"build.date": TO_DATE.unix()}},
-				{"eq": {"build.branch": "mozilla-inbound"}},
-				{"or": testGroups.map(function(r){
-					return {"eq": {
-						"run.suite": r.suite,
-						"result.test": r.test,
-						"build.platform": r.platform,
-						"build.type": r.build_type
-					}}
-				})}
-			]},
-			"limit": 100000,
-			"format": "list"
-		}));
-
-		addGroupId(success, ["suite", "test", "platform", "build_type"]);
-
-		var groupedSuccesses = (yield (Qb.calc2List({
-			"from": success.data,
-			"select": [
-				{"name": "last_good", "value": "build_date", "aggregate": "max"},
-				{"name": "details", "value": ".", "aggregate": "list"},
-				{"value": "_group_id", "aggregate": "one"},
-				{"name": "success_count", "value": ".", "aggregate": "count"}
-			],
-			"edges": ["suite", "test", "platform", "build_type"],
-			"meta": {"format": "cube"}
-		}))).list;
-
-
-		//CALCULATE THE TOTAL WEIGHT TO NORMALIZE THE TEST SCORES {1 - (age/7)}
-		//INSERT THIS NEW INFO TO OUR MAIN DATA STRUCTURE
-		groupedSuccesses.forall(function(s){
-			var test_group = tests[s._group_id];
-			test_group.last_good = s.last_good;
-			test_group.details.extend(s.details);
-			test_group.success_count = s.success_count;
-
-			var is_done = {};  //THERE ARE SUBTESTS IN THE details, ONLY COUNT THE TEST ONCE
-			var failure_score = 0;
-			var total_score = 0;
-			test_group.details.forall(function(d){
-				if (!is_done[d._id]) {
-					is_done[d._id] = true;
-					var score = 1 - NOW.subtract(Date.newInstance(d.build_date)).divideBy(Duration.DAY) / 7;
-					if (score < 0) score = 0;
-					if (!d.ok) {
-						failure_score += score;
-					}//endif
-					total_score += score;
-				}//endif
-			});
-			test_group.total_score = total_score;
-			test_group.failure_score = failure_score;
-			if (total_score != 0) {
-				test_group.score = failure_score / total_score;
-			}//endif
-
-			$("#" + FAIL_PREFIX + test_group.rownum+" td")
-				.first()
-				.html("" + aMath.round(test_group.score*100, {digits: 2}));
-		});
-	} finally {
-		Log.actionDone(a);
-	}//try
 	yield (null);
-};//function
-
-
-var addGroupId = function(g, edges){
-	g.data.forall(function(t){
-		t._group_id = edges.map(function(e){
-			return t[e];
-		}).join("::");
-	});
-};
-
-
-function showFailureTable(testGroups){
-	var header = '<tr>' +
-		'<th>Score</th>' +
-		'<th>Last Fail</th>' +
-		'<th>Fail Count</th>' +
-		'<th>Suite</th>' +
-		'<th>Test</th>' +
-		'<th>Platform</th>' +
-		'<th>Build Type</th>' +
-		'<th style="width:200px;">Subtests</th>' +
-		'</tr>';
-
-	var ROW_TEMPLATE = new Template('<tr class="hoverable" id="' + FAIL_PREFIX + '{{rownum}}">' +
-		'<td>{{score}}</td>' +
-		'<td>{{last_fail|datetime}}</td>' +
-		'<td>{{failure_count|html}}</td>' +
-		'<td columnName="run.suite" class="deletable">{{suite|html}}</td>' +
-		'<td columnName="result.test" class="deletable">{{test|html}}</td>' +
-		'<td columnName="build.platform" class="deletable">{{platform|html}}</td>' +
-		'<td columnName="build.type" class="deletable">{{build_type|html}}</td>' +
-		'<td style="width:200px;">{{subtests|json|html}}</td>' +
-		'</tr>'
-	);
-
-	body = testGroups.map(function(g, i){
-		g.rownum=i;
-		g.score = coalesce(g.score, "");
-		return ROW_TEMPLATE.expand(g);
-	}).join("");
-
-	$("#details").html(
-		'<table class="table">' +
-		header +
-		body +
-		'</table>'
-	);
-
-	//ADD CLICKERS
-	testGroups.forall(function(g){
-		var id = g.rownum;
-		$("#" + FAIL_PREFIX + id).click(function(e){
-			if (currentClicker){
-				currentClicker.kill();
-			}//endif
-			$("#chart").html("");
-			var id = convert.String2Integer($(this).attr("id").substring(FAIL_PREFIX.length));
-			var g=testGroups[id];
-
-			if (!g.thread){
-				g.thread = new Thread(function*(){
-					yield (getDetails(0, [g]));
-				});
-				g.thread.start();
-			}//endif
-
-			currentClicker = Thread.run(chart(g));
-		});
-	});
-
-	//ADD REMOVE BUTTONS
-	$("#details").find("td").each(function(){
-		var self = $(this);
-		if (self.attr("columnName")){
-			add_remove_button(self);
-		}
-	});
-	layoutAll();
-
 }//function
 
+
+var CACHE;
+(function(){
+	var cache = {};
+
+	function _CACHE(func){
+		if (String(retval) === '[object Generator]') {
+
+		}else{
+
+		}//endif
+
+		var output = function(){
+			var key = convert.value2json(arguments);
+			var result = cache[key];
+			if (result === undefined) {
+				result = func.apply(this, arguments);
+				cache[key] = result;
+			}//endif
+			return result;
+		};
+		return output;
+	}//function
+	CACHE=_CACHE;
+})();
