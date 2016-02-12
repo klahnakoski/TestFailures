@@ -31,7 +31,7 @@
 </div>
 <div id="content" style="padding: 10px" layout="tr=window.tr;left=sidebar_name.right;bottom=footer.top;">
 	<div style="font-size: 2em;"> Search for test:
-		<form action="javascript:onChange()" style="display:inline-block;">
+		<form action="" style="display:inline-block;">
 			<input id="search" class="widget" style="width: 30em;height:1.4em;" type="text">
 		</form>
 		<span id="num_found" style="font-size: 0.7em"></span>
@@ -53,7 +53,6 @@
 importScript(['js/util.js', 'js/failures.js'], function(){
 	layoutAll();
 	sidebarSlider();
-	Log.actionDone();
 
 	var params = Session.URL.getFragment();
 
@@ -72,6 +71,8 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 		var l = $(".loading");
 		l.hide();
 	};//function
+
+	Log.actionDone();
 });
 
 </script>

@@ -3,7 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 
-
 importScript("../modevlib/aLibrary.js");
 importScript("../modevlib/Settings.js");
 importScript("../modevlib/MozillaPrograms.js");
@@ -15,29 +14,29 @@ importScript("../modevlib/qb/Qb.js");
 
 
 var search = function*(query){
-	var output = yield (Rest.post({
-		url: "http://activedata.allizom.org/query",
-		json: query
-	}));
+  var output = yield (Rest.post({
+    url: "http://activedata.allizom.org/query",
+    json: query
+  }));
 
-	yield (output);
+  yield (output);
 };
 
 function sidebarSlider(){
-	var WIDTH = "320px";
+  var WIDTH = "320px";
 
-	$("body").css("display", "block");
+  $("body").css("display", "block");
 
-	$('.sidebar_name').click(function(){
-		var self = $(this);
-		if (self.hasClass("selected")) {
-			self.removeClass("selected");
-			$("#sidebar").css({"width": "0px"});
-			dynamicLayout();
-		} else {
-			self.addClass("selected");
-			$("#sidebar").css({"width": WIDTH});
-			dynamicLayout();
-		}//endif
-	});
+  $('.sidebar_name').click(function(){
+    var self = $(this);
+    if (self.hasClass("selected")) {
+      self.removeClass("selected");
+      $("#sidebar").css({"width": "0px"});
+      dynamicLayout();
+    } else {
+      self.addClass("selected");
+      $("#sidebar").css({"width": WIDTH});
+      dynamicLayout();
+    }//endif
+  });
 }
