@@ -175,12 +175,24 @@ function showOne(div_id, group){
       "from": result.data,
       "select": [
         {"name": "build_date", "value": "Date.newInstance(build_date)", "aggregate": "min"},
-        {"name": "duration", "value": "((build_date!=null && duration==null) ? -1 : duration)", "aggregate": "average"}
+        {
+          "name": "duration",
+          "value": {
+            "when": {"missing": "build_date"},
+            "then": null,
+            "else": {"coalesce": ["duration", -1]}
+          },
+          "aggregate": "average"
+        }
       ],
       "edges": [
         {
           "name": "result",
-          "value": "(duration==null ? 'incomplete' : ok)",
+          "value": {
+            "when":{"missing":"duration"},
+            "then": {"literal":"incomplete"},
+            "else": "ok"
+          },
           "domain": {
             "type": "set", "partitions": [
               {"name": "pass", "value": true, "style": {"color": "#1f77b4"}},

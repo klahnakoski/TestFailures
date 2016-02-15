@@ -1,0 +1,37 @@
+{
+	"constants": {
+		"pyLibrary.env.http.default_headers": {
+			"Referer": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
+		},
+		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000
+	},
+	"destination": {
+		"host": "http://localhost",
+		"port": 9200,
+		"index": "test_summary",
+		"type": "result",
+		"schema": {"$ref":"../schema/test_summary.json"},
+		"timeout": 300,
+		"debug": true,
+		"limit_replicas": true
+	},
+	"debug": {
+		"trace": true,
+		"cprofile": {
+			"enabled": false,
+			"filename": "./results/profile.tab"
+		},
+		"log": [
+			{
+				"log_type": "console"
+			},
+			{
+				"log_type": "email",
+				"from_address": "klahnakoski@mozilla.com",
+				"to_address": "klahnakoski@mozilla.com",
+				"subject": "[ALERT][Dev] Problem with Treeherder ETL",
+				"$ref": "file://~/private.json#email"
+			}
+		]
+	}
+}
