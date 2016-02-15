@@ -31,7 +31,7 @@
 </div>
 <div id="content" style="padding: 10px" layout="tr=window.tr;left=sidebar_name.right;bottom=footer.top;">
 	<div style="font-size: 2em;"> Search for test:
-		<form action="" style="display:inline-block;">
+		<form id="search_form" style="display:inline-block;">
 			<input id="search" class="widget" style="width: 30em;height:1.4em;" type="text">
 		</form>
 		<span id="num_found" style="font-size: 0.7em"></span>
@@ -51,16 +51,36 @@
 
 <script type="application/javascript">
 importScript(['js/util.js', 'js/failures.js'], function(){
+	var RECENT_DATE = Date.today().subtract(Duration.WEEK);
+	var TO_DATE = Date.now().floor(Duration.DAY);
+
+	var dateFilter = {"and":[
+		{"gte": {"run.timestamp": RECENT_DATE.unix()}},
+        {"lt": {"run.timestamp": TO_DATE.unix()}}
+	]};
+
 	layoutAll();
 	sidebarSlider();
 
-	var params = Session.URL.getFragment();
+	function search(){
+		var testName = $("#search").val();
+		Session.URL.set("test", testName);
 
-	$("#search").keyup(function(){
-		var terms = $("#search").val();
-		_search(terms);
-	});
-	$("#search").focus();
+		_search(testName, dateFilter);
+		return false;
+	}//function
+
+
+	$("#search_form").submit(search);
+
+	var search_box=$("#search");
+
+	var params = Session.URL.getFragment();
+	if (params.test){
+		search_box.val(params.test);
+		_search(params.test, dateFilter);
+	}//endif
+	search_box.focus();
 
 	Thread.showWorking = function(numThread){
 		var l = $(".loading");

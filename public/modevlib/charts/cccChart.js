@@ -522,7 +522,7 @@ var aChart = {};
                     var self = this;
                     dateMarks.forall(function (m) {
                         try {
-                            self.chart.markEvent(Date.newInstance(m.date).format(Qb.domain.time.DEFAULT_FORMAT), m.name, m.style);
+                            self.chart.markEvent(Date.newInstance(m.date).format(qb.domain.time.DEFAULT_FORMAT), m.name, m.style);
                         } catch (e) {
                             Log.warning("markEvent failed", e);
                         }

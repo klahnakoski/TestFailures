@@ -104,6 +104,7 @@ def agg(destination, please_stop):
             destination.extend([{"id": t._id, "value": t} for t in tests_summary.data])
     please_stop.go()
 
+
 def main():
     global config
 

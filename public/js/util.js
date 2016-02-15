@@ -10,7 +10,7 @@ importScript("../modevlib/qb/ESQuery.js");
 importScript("../modevlib/charts/aColor.js");
 importScript("../css/menu.css");
 importScript("../modevlib/math/Stats.js");
-importScript("../modevlib/qb/Qb.js");
+importScript("../modevlib/qb/qb.js");
 
 
 var search = function*(query){

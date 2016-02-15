@@ -39,7 +39,9 @@ expressions.when = function(expr){
     var pass = qb2function(expr.then);
     var fail = qb2function(expr.else);
     return function(value){
-      if (test(value)) {
+      var condition=test(value);
+
+      if (condition!=null && condition!=false) {
         return pass(value);
       } else {
         return fail(value);
@@ -68,3 +70,31 @@ expressions.literal=function(expr) {
   return expr.literal;
 };
 
+expressions.case = function(expr){
+  var test = [];
+  var then = [];
+  var els_ = function(){};
+
+  expr.case.forall(function(s, i, switchs){
+    if (i==switchs.length-1){
+      els_ = qb2function(s);
+    }else{
+      test[i] = qb2function(s.when);
+      then[i] = qb2function(s.then);
+    }//endif
+  });
+
+  //(function(test, then, els_){
+    return function(value){
+      for (var i = 0; i < test.length; i++) {
+        var cond = test[i](value);
+        cond = cond != null && cond != false;
+        if (cond) {
+          return then[i](value);
+        }//endoif
+      }//for
+      return els_(value);
+    };
+  //})(test, then, els_);
+
+};

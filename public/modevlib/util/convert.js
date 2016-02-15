@@ -265,7 +265,7 @@ var convert = function(){
 							return k.escape(urlMap) + "=" + value2json(vv).escape(urlMap);
 						}//endif
 					}).join("&");
-				} else if (isObject(v)) {
+				} else if (Map.isObject(v)) {
 					return k.escape(urlMap) + "=" + value2json(v).escape(urlMap);
 				} else {
 					return k.escape(urlMap) + "=" + ("" + v).escape(urlMap);
@@ -1165,5 +1165,10 @@ var convert = function(){
 		return "";
 
 
+	};//method
+
+	convert.String2RegExp=function(value){
+		//SNAGGED FROM http://stackoverflow.com/questions/3446170/escape-string-for-use-in-javascript-regex
+		return value.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
 	};//method
 })();
