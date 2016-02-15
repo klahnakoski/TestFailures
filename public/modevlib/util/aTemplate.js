@@ -6,7 +6,11 @@ importScript("convert.js");
 
 
 var Template = function Template(template){
-	this.template = template;
+	if (template instanceof Template){
+		this.template = template.template;
+	}else{
+		this.template = template;
+	}//endif
 };
 
 (function(){
@@ -57,26 +61,44 @@ var Template = function Template(template){
 	FUNC.json = function(value){
 		return convert.value2json(value);
 	};
+	FUNC.comma = function(value){
+		//SNAGGED FROM http://stackoverflow.com/questions/2901102/how-to-print-a-number-with-commas-as-thousands-separators-in-javascript
+		var parts = value.toString().split(".");
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        return parts.join(".");
+	};
 	FUNC.quote = function(value){
 		return convert.value2quote(value);
 	};
 	FUNC.format = function(value, format){
+		if (value instanceof Duration){
+			return value.format(format);
+		}
 		return Date.newInstance(value).format(format);
 	};
-	FUNC.comma = function(value){
-		return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");  //Snagged from http://stackoverflow.com/questions/2901102/how-to-print-a-number-with-commas-as-thousands-separators-in-javascript
+	FUNC.round = function(value, digits){
+		return aMath.round(value, {"digits":digits});
 	};
-	FUNC.round = aMath.round;
+	FUNC.metric = aMath.roundMetric;
+	FUNC.upper = function(value){
+		if (isString(value)){
+			return value.toUpperCase();
+		}else{
+			return convert.value2json();
+		}
+	};
 
 	function _expand(template, namespaces){
 		if (template instanceof Array) {
 			return _expand_array(template, namespaces);
 		} else if (isString(template)) {
 			return _expand_text(template, namespaces);
-		} else if (template.cell){
-			return _expand_grid(template, namespaces);
-		} else {
+		} else if (template.from_items) {
+			return _expand_items(template, namespaces);
+		} else if (template.from) {
 			return _expand_loop(template, namespaces);
+		}else{
+			Log.error("Not recognized {{template}}", {"template": template})
 		}//endif
 	}
 
@@ -86,57 +108,6 @@ var Template = function Template(template){
 		return arr.map(function(t){
 			return _expand(t, namespaces);
 		}).join("");
-	}
-
-	function _expand_grid(table, namespaces){
-		table.column = coalesce(table.column, table.col);
-		Map.expecting(table, ["from", "column", "row", "cell"]);
-
-		if (isString(table.from)) {
-			frum = namespaces[0][table.from];
-		} else {
-			frum = table.from;
-		}//endif
-		if (!(frum instanceof Array) || frum.length != 2) {
-			Log.error("Expecting from clause to be an 2-tuple of partitions, [rows, colums]")
-		}//endif
-
-		var rows=frum[0];
-		var columns = frum[1];
-		var header = columns.map(function(col, colnum, cols){
-
-			return '<th>'+_expand(table.column, extendNamespace(namespaces, {"col":col, "column":col, "colnum":colnum, "cols":cols}))+'</th>\n'
-		}).join('');
-
-		var body = rows.map(function(row, rownum, rows){
-			var output='<tr>\n<th>'+
-			_expand(table.row, extendNamespace(namespaces, {"row":row, "rownum":rownum, "rows":rows}))+
-			'</th>\n'+
-			columns.map(function(col, colnum, cols){
-				return '<td>' + _expand(table.cell, extendNamespace(namespaces, {"row": row, "rownum": rownum, "rows": rows, "col": col, "column":col, "colnum": colnum, "cols": cols})) + '</td>\n';
-			}).join('')+
-			'</tr>\n';
-			return output;
-		}).join("");
-
-		return '<table>\n<thead>\n<tr>\n<th>&nbsp;</th>'+header+'</tr>\n</thead>\n<tbody>\n'+body+'</tbody>\n</table>\n';
-	}
-
-	function extendNamespace(namespaces, m){
-		var map = Map.copy(namespaces[0]);
-		if (m instanceof Object && !(m instanceof Array)) {
-			var keys = Object.keys(m);
-			keys.forall(function(k){
-				map[k.toLowerCase()] = m[k];
-			});
-		}//endif
-
-		//ADD RELATIVE REFERENCES
-		map["."] = m;
-		namespaces.forall(function(n, i){
-			map[".".repeat(i+2)] = n;
-		});
-		return namespaces.copy().prepend(map);
 	}
 
 	function _expand_loop(loop, namespaces){
@@ -150,6 +121,32 @@ var Template = function Template(template){
 			map["."] = m;
 			if (m instanceof Object && !(m instanceof Array)) {
 				Map.forall(m, function(k, v){
+					map[k.toLowerCase()] = v;
+				});
+			}//endif
+			namespaces.forall(function(n, i){
+				map[Array(i + 3).join(".")] = n;
+			});
+
+			return _expand(loop.template, namespaces.copy().prepend(map));
+		}).join(loop.separator === undefined ? "" : loop.separator);
+	}
+
+	/*
+	LOOP THROUGH THEN key:value PAIRS OF THE OBJECT
+	 */
+	function _expand_items(loop, namespaces){
+		Map.expecting(loop, ["from_items", "template"]);
+		if (typeof(loop.from_items) != "string") {
+			Log.error("expecting `from_items` clause to be string");
+		}//endif
+
+		return Map.map(Map.get(namespaces[0], loop.from_items), function(name, value){
+			var map = Map.copy(namespaces[0]);
+			map["name"] = name;
+			map["value"] = value;
+			if (value instanceof Object && !(value instanceof Array)) {
+				Map.forall(value, function(k, v){
 					map[k.toLowerCase()] = v;
 				});
 			}//endif

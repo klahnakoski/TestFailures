@@ -609,7 +609,7 @@ var convert = function(){
 		if (options && options.columns) {
 			columns = options.columns;
 		} else {
-			columns = Qb.getColumnsFromList(data);
+			columns = qb.getColumnsFromList(data);
 		}//endif
 		columns.forall(function(v, i){
 			header += wrapWithHtmlTag("td", v.name);
@@ -648,7 +648,7 @@ var convert = function(){
 		var prefix = tagName.map(function(t){
 			return "<" + t + ">"
 		}).join("");
-		var suffix = Qb.reverse(tagName).map(function(t){
+		var suffix = qb.reverse(tagName).map(function(t){
 			return "</" + t + ">"
 		}).join("");
 
@@ -707,7 +707,7 @@ var convert = function(){
 		var output = "";
 
 		//WRITE HEADER
-		var columns = Qb.getColumnsFromList(data);
+		var columns = qb.getColumnsFromList(data);
 		for (var cc = 0; cc < columns.length; cc++) output += convert.String2Quote(columns[cc].name) + "\t";
 		output = output.substring(0, output.length - 1) + "\n";
 
@@ -755,7 +755,7 @@ var convert = function(){
 
 
 	convert.List2Table = function(list, columnOrder){
-		var columns = Qb.getColumnsFromList(list);
+		var columns = qb.getColumnsFromList(list);
 		if (columnOrder !== undefined) {
 			var newOrder = [];
 			OO: for (var o = 0; o < columnOrder.length; o++) {
@@ -994,8 +994,19 @@ var convert = function(){
 			var prefix = pair[variableName];
 			return function(row, i, rows){
 				var v = Map.get(row, variableName);
-				return typeof(v) == "string" && v.startsWith(prefix);
-			}
+				if (v === undefined) {
+					return false;
+				} else if (v instanceof Array) {
+					for (var vi = 0; vi < v.length; vi++) {
+						if (typeof(v[vi]) == "string" && v[vi].startsWith(prefix)) return true;
+					}//endif
+					return false;
+				} else if (typeof(v) == "string") {
+					return v.startsWith(prefix);
+				} else {
+					Log.error("Do not know how to handle")
+				}//endif
+			};
 		} else if (op == "match_all") {
 			return TRUE_FILTER;
 		} else if (op == "regexp") {
@@ -1138,7 +1149,9 @@ var convert = function(){
 			var pair = esFilter[op];
 			var variableName = Object.keys(pair)[0];
 			var value = pair[variableName];
-			return "(typeof(" + variableName + ")==\"string\" && " + variableName + ".startsWith(" + convert.Value2Quote(value) + "))";
+			return 'Array.OR(Array.newInstance('+variableName+').map(function(v){\n'+
+			'	return typeof(v)=="string" && v.startsWith(' + convert.Value2Quote(value) + ')\n'+
+			'}))\n';
 		} else if (op == "match_all") {
 			return "true"
 		} else if (op == "regexp") {

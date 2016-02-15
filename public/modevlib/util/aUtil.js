@@ -15,24 +15,15 @@ var Map = {};
 // null IS A VALID VALUE INDICATING THE VALUE IS UNKNOWN
 ////////////////////////////////////////////////////////////////////////////////
 (function(){
-	function splitField(fieldname){
-		try {
-			return fieldname.replaceAll("\\.", "\b").split(".").map(function(v){
-				return v.replaceAll("\b", ".");
-			});
-		} catch (e) {
-			Log.error("Can not split field", e);
-		}//try
-	}//method
-
 	Map.newInstance = function(key, value){
 		var output = {};
 		output[key] = value;
 		return output;
 	};//method
 
-	//LIST OF [k, v] TUPLES EXPECTED
 	Map.zip = function(keys, values){
+		// LIST OF [k, v] TUPLES EXPECTED
+		// OR LIST OF keys AND LIST OF values
 		var output = {};
 
 		if (values === undefined) {
@@ -143,29 +134,6 @@ var Map = {};
 		return obj;
 	};//method
 
-	Map.codomain = function(map){
-		var output = [];
-		var keys = Object.keys(map);
-		for (var i = keys.length; i--;) {
-			var val = map[keys[i]];
-			if (val !== undefined) output.push(val);
-		}//for
-		return output;
-	};//method
-	Map.values = Map.codomain;
-
-	//RETURN KEYS
-	Map.domain = function(map){
-		var output = [];
-		var keys = Object.keys(map);
-		for (var i = keys.length; i--;) {
-			var key = keys[i];
-			var val = map[key];
-			if (val !== undefined) output.push(key);
-		}//for
-		return output;
-	};//method
-
 
 	//RETURN TRUE IF MAPS LOOK IDENTICAL
 	Map.equals = function(a, b){
@@ -183,6 +151,7 @@ var Map = {};
 
 		return true;
 	};//method
+
 
 	var forAllKey = function(map, func){
 		//func MUST ACCEPT key, value PARAMETERS
@@ -213,12 +182,12 @@ var Map = {};
 		//func MUST ACCEPT key, value, index PARAMETERS
 		var output = [];
 		var keys = Object.keys(map);
-		for (var i = keys.length; i--;) {
+		for (var i = 0; i < keys.length; i++) {
 			var key = keys[i];
 			var val = map[key];
 			if (val !== undefined) {
 				var result = func(key, val, i);
-				if (result !== undefined) output.push(result);
+				if (result !== undefined) output.append(result);
 			}//endif
 		}//for
 		return output;
@@ -245,16 +214,29 @@ var Map = {};
 		var output = [];
 		var keys = Object.keys(map);
 		for (var i = keys.length; i--;) {
-			var key = keys[i];
-			var val = map[key];
-			if (val !== undefined) {
-				output.push(val);
-			}//endif
+			var val = map[keys[i]];
+			if (val !== undefined) output.push(val);
 		}//for
 		return output;
 	};
+	Map.codomain = Map.getValues;
+	Map.values = Map.getValues;
 
-	Map.getKeys = Object.keys;
+
+	//RETURN KEYS
+	Map.domain = function(map){
+		var output = [];
+		var keys = Object.keys(map);
+		for (var i = keys.length; i--;) {
+			var key = keys[i];
+			var val = map[key];
+			if (val !== undefined) output.push(key);
+		}//for
+		return output;
+	};//method
+	Map.keys = Map.domain;
+	Map.getKeys = Map.domain;
+
 
 	Map.isObject = function (val) {
 	    if (val === null) { return false;}
@@ -316,6 +298,9 @@ Util.returnNull = function(__row){
 
 
 //POOR IMPLEMENTATION
+/*
+ * @return {string} A Random GUID
+ */
 Util.GUID = function(){
 	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c){
 		var r = aMath.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -324,4 +309,39 @@ Util.GUID = function(){
 };//method
 
 
+function splitField(fieldname){
+	try {
+		return fieldname.replaceAll("\\.", "\b").split(".").map(function(v){
+			return v.replaceAll("\b", ".");
+		});
+	} catch (e) {
+		Log.error("Can not split field", e);
+	}//try
+}//method
 
+
+
+deepCopy = function(value) {
+    if (typeof value !== "object" || !value)
+        return value;
+
+	var copy;
+	var k;
+    if (Array.isArray(value)){
+        copy = [];
+        for (k=value.length;k--;) copy[k] = deepCopy(value[k]);
+        return copy;
+    }//endif
+
+    var cons = value.constructor;
+    if (cons === RegExp || cons === Date) return value;
+
+    copy = cons();
+	Map.forall(value, function(k, v){copy[k]=deepCopy(v);});
+	return copy;
+};
+
+
+function isFunction(f){
+	return typeof f === 'function'
+};

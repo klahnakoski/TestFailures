@@ -3,9 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 importScript("Dimension.js");
-importScript("qb/Qb.js");
 importScript("qb/ESQuery.js");
-importScript("qb/Qb.js");
+importScript("qb/qb.js");
 
 if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 
@@ -19,15 +18,6 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 		"name": "Release",
 		"isFacet": true,
 		"edges": [
-			{
-				"name": "Firefox32",
-				"version": 32,
-				"releaseDate": "2014-09-02",
-				"esfilter": {"and": [
-					{"not": {"terms": {"cf_status_firefox32": SOLVED}}},
-					{"term": {"cf_tracking_firefox32": "+"}}
-				]}
-			},
 			{
 				"name": "Firefox33",
 				"version": 33,
@@ -184,7 +174,7 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 
 		]
 	};
-	releaseTracking.requiredFields = Array.union(releaseTracking.edges.select("esfilter").map(Qb.requiredFields));
+	releaseTracking.requiredFields = Array.union(releaseTracking.edges.select("esfilter").map(qb.requiredFields));
 
 	{//FIND CURRENT RELEASE, AND ENSURE WE HAVE ENOUGH RELEASES!
 		var currentRelease = undefined;
@@ -290,6 +280,11 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 							"name": "Regressions",
 							//"style": {"color": "#d62728"},
 							"esfilter": {"term": {"keywords": "regression"}}
+						},
+						{
+							"name": "e10s",
+							//"style": {"color": "#d62728"},
+							"esfilter": {"regexp": {"cf_tracking_e10s": ".*\\+"}}
 						},
 						{   "name":"other",
 							"style": {"color": "#CCCCCC"},
@@ -415,22 +410,22 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 
 				{"name": "Team", "isFacet": true, "esfilter": {"match_all": {}},
 					"partitions": [
-						{"name": "Desktop", "esfilter": {"or": [
+						{"name": "Desktop", "style": {"color": "#5DA5DA"}, "esfilter": {"or": [
 							{"and": [
 								{"term": {"product": "firefox"}},
 								{"not": {"prefix": {"component": "dev"}}} //Anything not starting with "Developer Tools" (this is not 100% correct but should be a place to start)
 							]},
 							{"term": {"product": "toolkit"}}
 						]}},
-						{"name": "Dev Tools", "esfilter": {"and": [
+						{"name": "Dev Tools", "style": {"color": "#FAA43A"},  "esfilter": {"and": [
 							{"term": {"product": "firefox"}},
 							{"prefix": {"component": "dev"}} // Component: Anything starting with "Developer Tools"
 						]}},
-						{"name": "Mobile", "esfilter": {"and": [
+						{"name": "Mobile", "style": {"color": "#60BD68"},  "esfilter": {"and": [
 							{"term": {"product": "firefox for android"}},
 							{"not": {"prefix": {"component": "graphics"}}}  //All except "Graphics, Panning and Zooming"
 						]}},
-						{"name": "JS", "esfilter": {"and": [
+						{"name": "JS", "style": {"color": "#F17CB0"},  "esfilter": {"and": [
 							{"term": {"product": "core"}},
 							{"or": [
 								{"prefix": {"component": "javascript"}},  //starts with "JavaScript" or "js", "MFBT", "Nanojit"
@@ -439,7 +434,7 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 								{"prefix": {"component": "nanojit"}}
 							]}
 						]}},
-						{"name": "Layout", "esfilter": {"and": [
+						{"name": "Layout", "style": {"color": "#B2912F"}, "esfilter": {"and": [
 							{"term": {"product": "core"}},
 							{"or": [
 								{"prefix": {"component": "css parsing"}},  // Component: "CSS Parsing and Computation", starts with "HTML", starts with "Image", starts with "Layout", "Selection"
@@ -449,7 +444,7 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 								{"prefix": {"component": "selection"}}
 							]}
 						]}},
-						{"name": "Graphics", "esfilter": {"or": [
+						{"name": "Graphics", "style": {"color": "#B276B2"},  "esfilter": {"or": [
 							//FROM MILAN: Jan 30th, 2015
 							//In Core: Canvas: 2D, Canvas: WebGL, GFX: Color Management, Graphics, Graphics: Layers, Graphics: Text, ImageLib, Panning and Zooming
 							//In Firefox for Android: Graphics, Panning and Zooming
@@ -473,15 +468,15 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 								]}
 							]}
 						]}},
-						{"name": "Necko", "description": "Network", "esfilter": {"and": [
+						{"name": "Necko", "style": {"color": "#DECF3F"},  "description": "Network", "esfilter": {"and": [
 							{"term": {"product": "core"}},
 							{"prefix": {"component": "network"}}  // Product: Core, Component: starts with "Networking"
 						]}},
-						{"name": "Security", "esfilter": {"and": [
+						{"name": "Security", "style": {"color": "#F15854"},  "esfilter": {"and": [
 							{"term": {"product": "core"}},
 							{"prefix": {"component": "security"}}  // Product: Core, Component: starts with "Security"
 						]}},
-						{"name": "DOM", "esfilter": {"and": [
+						{"name": "DOM", "style": {"color": "#4D4D4D"},  "esfilter": {"and": [
 							//From Andrew  Jan30 2015
 							//
 							//DOM
@@ -505,7 +500,7 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 								{"term": {"component": "html: parser"}}
 							]}
 						]}},
-						{"name": "Media", "esfilter": {"and": [
+						{"name": "Media", "style": {"color": "#60BDB1"},  "esfilter": {"and": [
 							{"term": {"product": "core"}},
 							{"or": [
 								{"prefix": {"component": "video"}},  // starts with "Video/Audio", "Web Audio", starts with "WebRTC"
@@ -513,16 +508,17 @@ if (!Mozilla) var Mozilla = {"name": "Mozilla", "edges": []};
 								{"prefix": {"component": "webrtc"}}
 							]}
 						]}},
-						{"name": "AllY", "description": "Accessibility", "esfilter": {"and": [
+						{"name": "AllY", "style": {"color": "#BA7659"},  "description": "Accessibility", "esfilter": {"and": [
 							{"term": {"product": "core"}},
 							{"prefix": {"component": "disability"}}  // "Disability Access APIs"
 						]}},
-						{"name": "Platform Integration", "esfilter": {"and": [
+						{"name": "Platform Integration", "style": {"color": "#757EBA"},  "esfilter": {"and": [
 							{"term": {"product": "core"}},
 							{"prefix": {"component": "widget"}}  // Component: starts with "Widget"
 						]}},
 						{
 							"name": "Other",
+							"style": {"color": "#CCCCCC"},
 							"esfilter": {"match_all": {}} // Any tracked bug not in one of the product/component combinations above.
 						}
 					]
