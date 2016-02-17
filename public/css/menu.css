@@ -1,0 +1,444 @@
+@CHARSET "ISO-8859-1";
+
+@font-face {
+    font-family: 'Open Sans';
+    src: url('OpenSans-Light-webfont.eot');
+    src: url('OpenSans-Light-webfont.eot') format('embedded-opentype'), url('OpenSans-Light-webfont.woff') format('woff'), url('OpenSans-Light-webfont.ttf') format('truetype'), url('./OpenSans-Light-webfont.svgOpenSans-Light-webfont.svg#OpenSansBold') format('svg');
+    font-weight: 600
+}
+
+@font-face {
+    font-family: 'Open Sans Bold';
+    src: url('OpenSans-Bold-webfont.eot');
+    src: url('OpenSans-Bold-webfont.eot') format('embedded-opentype'), url('OpenSans-Bold-webfont.woff') format('woff'), url('OpenSans-Bold-webfont.ttf') format('truetype'), url('./OpenSans-Bold-webfont.svgOpenSans-Bold-webfont.svg#OpenSansBold') format('svg');
+    font-weight: 600
+}
+
+html {
+    position: relative;
+    border-top: 2px solid #fff;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    /*background: #f5f1e8 url(../images/bg-sand.png) repeat;*/
+    background: url(../images/bg-gradient-sand.png) repeat-x 0 0, url(../images/bg-sand.png) repeat 0 0, #f6f5f1
+}
+
+b {
+    font-weight: bold;
+}
+
+
+
+a {
+    color: #0096dd;
+    text-decoration: none
+}
+
+a:hover, a:active {
+    color: #0073aa;
+    text-decoration: underline
+}
+
+
+
+a.tabzilla {
+    float: right;
+    display: block;
+    background: url('../images/tab.png');
+    background-repeat: no-repeat;
+    font-family: 'Open Sans Bold';
+    font-size: 25px;
+    color: gray;
+    text-align: center;
+    height: 44px;
+    width: 150px;
+    position: relative;
+    padding-top: 7px;
+    text-transform: uppercase;
+    /*text-indent: 30px;*/
+    overflow: hidden;
+    z-index: 999
+}
+
+a.tabzilla:hover, a.tabzilla:active {
+    color: #0073aa;
+    text-decoration: none
+}
+
+.description {
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+
+.indent {
+	margin-left: 30px;
+
+}
+
+
+body {
+    position: relative;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 14px;
+    color: #444444;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    line-height: 20px;
+    padding-bottom: 40px;
+    margin: 0 auto;
+}
+
+
+.menu {
+    font-family: 'Open Sans', sans-serif;
+      font-size: 0.8em;
+}
+
+.menu li {
+    list-style-type: none;
+    list-style-position: outside;
+    /*margin-left: -15px;*/
+    padding: 0pt;
+}
+
+.menu .ui-menu-header {
+    font-size: 1.4em;
+}
+
+.menu .ui-selecting {
+    color: #CC4433;
+}
+
+.menu .ui-selected {
+    color: #4477CC;
+    list-style-type: disc;
+}
+
+.large {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 72px;
+  letter-spacing: -3px;
+  line-height: 100%;
+     margin-top: 0;
+}
+h1 {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 48px;
+  letter-spacing: -2px;
+  line-height: 100%;
+     margin-top: 0;
+  margin-bottom: 12px;
+}
+h2 {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 32px;
+  letter-spacing: -1px;
+  line-height: 100%;
+     margin-top: 0;
+   margin-bottom: 8px;
+
+}
+h3 {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 24px;
+  letter-spacing: -0.5px;
+  line-height: 100%;
+    margin-top: 0;
+    /*display:inline;*/
+   margin-bottom: 7px;
+}
+h4 {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 16px;
+  letter-spacing: -0.25px;
+  line-height: 100%;
+     margin-top: 0;
+   margin-bottom: 6px;
+}
+
+mstyle{
+	font-size: 1em;
+	color: black;
+	font-family: 'Open Sans', sans-serif;
+}
+
+.small, small {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 12px;
+  line-height: 100%;
+}
+
+
+.hoverable:hover {
+	background-color: #fafaba;
+}
+
+.deletable:hover {
+	background-color: #fababa;
+}
+
+
+.items {
+    border-bottom: 1px black solid;
+    margin-bottom: 10px;
+}
+
+.items .info {
+    display: block;
+    width: 70%;
+    margin-left: 230px;      /*css totally sucks*/
+    margin-top: -20px;       /*css totally sucks*/
+    margin-bottom: 10px;
+}
+
+.items a {
+    width: 230px;        /*css totally sucks*/
+    height:20px;         /*css totally sucks*/
+}
+
+.new {
+    border: 2px yellow solid;
+    background-image: url(../images/New.gif);
+    background-size:67px 45px;
+    background-position:right;
+    background-repeat:no-repeat;
+}
+
+.items .expired {
+    color: #888888;
+}
+
+.items .expired .info:before{
+    content:"EXPIRED - ";
+}
+
+.items .expired a {
+    width: 230px;        /*css totally sucks*/
+    height:20px;         /*css totally sucks*/
+    text-decoration: line-through;
+    color: #888888;
+}
+
+
+.warning {
+    font-family: 'Open Sans', sans-serif;
+    font-size:1.0em;
+    font-weight: bold;
+    color: red;
+}
+
+.code {
+    font-family: "courier new", sans-serif;
+    font-size:1.0em;
+    font-weight: bold;
+}
+
+
+
+.table {
+    border-collapse: collapse;
+    border-spacing: 0
+}
+
+.table th, .table td {
+    border-top: 1px solid rgba(0, 0, 0, 0.2);
+    padding: 5px 20px 5px 0;
+    text-align: left;
+}
+
+.table thead th, .table thead td {
+    border-top: 0;
+    padding-top: 0;
+    font-size: 16px;
+    font-family: 'Open Sans Light', sans-serif;
+    font-weight: normal
+}
+
+
+
+table.layout, tr, td, tbody, thead {
+    border: none;
+    margin: 0;
+    padding: 0;
+}
+
+
+#chart, .chart {
+    width: 800px;
+    position: relative;
+    border: 1px solid #aaaaaa;
+    border-bottom-color: white;
+    border-right-color: white;
+    margin: -1px;
+    background-image: linear-gradient(#f9f8f4, #f6f5f1);
+
+}
+
+
+
+/*******************************************************************************
+ * DIMENSION SELECTOR
+ ******************************************************************************/
+
+.dim-container {
+    position: relative;
+    overflow: hidden;
+    width:100%;
+    height:40px;
+}
+
+.dim-container .position {
+    position: absolute;
+    height:40px;
+    top:0px;
+    margin: 0;
+    padding: 0;
+    white-space:nowrap;
+}
+
+
+.dim-container .position span {
+    display: inline-block;
+    border-radius: .25em;
+    border: 0;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+
+    height:16px;
+    background-image: linear-gradient(#3c88cc, #276195);
+    margin: 4px 4px 4px 4px;
+    padding: 8px 8px;
+
+    color: #fff;
+    text-align: center;
+    font-size: 16px;
+    line-height: 16px;
+    text-decoration: none;
+    font-family: 'Open Sans', sans-serif;
+
+}
+
+.dim-container .position span:hover {
+    box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.1), inset 0 -2px 0 0 rgba(0, 0, 0, 0.2), inset 0 -12px 24px -12px #ffffff
+}
+
+
+.dim-container .position span.selected{
+    background-image: linear-gradient(#81bc2e, #659324);
+    color: #fff;
+    text-decoration: none;
+}
+
+
+.dim-addremove {
+    width:40px;
+    text-align:center;
+}
+
+
+
+
+
+.parameters {
+    width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+span.parameter_name {
+    float: left;
+    width: 150px;
+    text-align: right;
+    margin-right: 10px;
+}
+
+span.parameter_value {
+    font-weight:bold;
+}
+
+
+
+span.parameter_value:hover {
+    box-shadow: 2px 2px 2px 2px rgb(0,0,0);
+}
+
+span.parameter_error {
+    color: red;
+}
+
+#status {
+    color: red;
+    text-align: center;
+    font:20px arial,sans-serif;
+}
+
+#testMessage {
+    text-align: center;
+    font: 12px arial,sans-serif;
+}
+
+
+/*******************************************************************************
+SIDE BAR
+*******************************************************************************/
+
+
+#sidebar {
+    padding: 0;
+    margin: 0;
+}
+
+#sidebar h2 {
+    text-align: center;
+    font-size: 24px
+}
+
+#sidebar h2 img {
+    display: block;
+    margin: 0 auto 5px auto
+}
+
+#sidebar h2 a {
+    color: #484848
+}
+
+.sidebar_name {
+    float:left;
+    height: 100%;
+    width: 30px;
+    background-color: #777777;
+    position: relative;
+}
+
+.sidebar_name:hover {
+    background-color: #888888;
+}
+
+.sidebar_name div{
+    position: absolute;
+    right: 8px;
+    height: 18px;
+    transform-origin: right bottom;
+    transform: rotate(270deg);
+
+    -webkit-transform: rotate(270deg);
+    color: #dddddd;
+    font-size: 18px;
+}
+
+
+
+
+.widget {
+    font-size: 1.2em;
+    color: #292929;
+    display:inline;
+    text-align: left;
+    height: 1.5em;
+    overflow: hidden;
+    padding: 0 0 0 5px;
+    border: 1px solid #166ced;
+}
+

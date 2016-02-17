@@ -1,0 +1,103 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<HTML>
+<HEAD>
+	<script type="text/javascript" src="modevlib/imports/import.js"></script>
+</HEAD>
+<BODY>
+
+<div id="sidebar" layout="tl=window.tl;bottom=footer.bottom;" style="width:0;overflow:hidden;">
+	<div class="padding">
+		<div id="description">
+			This dashboard charts test durations by push date.
+			The text box can be used for searching by test name.
+			<ul>
+				<li>Blue - Successful</li>
+				<li>Orange - Test Failure</li>
+				<li>Red - Timeout (duration = -1 second)</li>
+			</ul>
+		</div>
+		<hr>
+		<div id="filters" style="width:300px;" class="menu">
+		</div>
+		<div id="parameters" style="display:none;">
+		</div>
+	</div>
+</div>
+<div id="sidebar_name" class="sidebar_name" layout="top=window.top;bottom=footer.top;left=sidebar.right;">
+	<div>Configuration</div>
+</div>
+<div id="content" style="padding: 10px 10px 50px 10px;" layout="tr=page.tr;left=sidebar_name.right;">
+	<div style="font-size: 1.5em;"> Search for test:
+		<form id="search_form" style="display:inline-block;">
+			<input id="search" class="widget" style="width: 30em;height:1.4em;" type="text">
+		</form>
+	</div>
+
+	<div id="status" style="height:30px">
+		Page Loading...
+		<span class="loading"><img src="images/spinner.gif" alt=""></span>
+	</div>
+
+	<div id="charts">Please wait, this will take a while.</div>
+</div>
+<div id="footer" style="height:50px;text-align: center;padding: 5px 0 5px 0;background-color: #fff;z-index: 12;" layout="bl=window.bl;br=window.br;">
+	Github Issues <a href="https://github.com/klahnakoski/TestFailures/issues/new">https://github.com/klahnakoski/TestFailures/issues/new</a><br>
+	Code <a href="https://github.com/klahnakoski/TestFailures/blob/master/html/failures.html">https://github.com/klahnakoski/TestFailures/blob/master/html/failures.html</a>
+</div>
+
+<script type="application/javascript">
+importScript(['js/util.js', 'js/failures.js'], function(){
+	var RECENT_DATE = Date.today().subtract(Duration.WEEK);
+	var TO_DATE = Date.now().floor(Duration.DAY);
+
+	var dateFilter = {"and":[
+		{"gte": {"run.timestamp": RECENT_DATE.unix()}},
+        {"lt": {"run.timestamp": TO_DATE.unix()}}
+	]};
+
+	layoutAll();
+	sidebarSlider();
+
+	function search(){
+		$("#charts").html("");
+		var testName = $("#search").val();
+		Session.URL.set("test", testName);
+
+		_search(testName, dateFilter);
+		return false;
+	}//function
+
+
+	$("#search_form").submit(search);
+
+	var search_box=$("#search");
+
+	var params = Session.URL.getFragment();
+	if (params.test){
+		search_box.val(params.test);
+		_search(params.test, dateFilter);
+	}//endif
+	search_box.focus();
+
+	Thread.showWorking = function(numThread){
+		var l = $(".loading");
+		l.show();
+	};//function
+
+	Thread.hideWorking = function(){
+		var l = $(".loading");
+		l.hide();
+	};//function
+
+	Log.actionDone();
+});
+
+</script>
+
+
+</BODY>
+</HTML>
+
