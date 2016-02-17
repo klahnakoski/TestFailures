@@ -1,7 +1,8 @@
 {
 	"constants": {
 		"pyLibrary.env.http.default_headers": {
-			"Referer": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
+			"Referer": "https://github.com/klahnakoski/TestFailures",
+			"User-Agent": "TestFailures"
 		},
 		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000
 	},

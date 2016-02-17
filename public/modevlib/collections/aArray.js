@@ -129,7 +129,7 @@ importScript("../util/aUtil.js");
     if (typeof(attrName)=="string"){
       if (attrName.indexOf(".")==-1){
         for(var i=0;i<this.length;i++)
-          output.push(this[i][attrName]);
+          output.push(Map.get(this[i], attrName));
       }else{
         for(var i=0;i<this.length;i++)
           output.push(Map.get(this[i], attrName));

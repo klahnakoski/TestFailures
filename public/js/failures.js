@@ -7,9 +7,30 @@ importScript("../modevlib/collections/aMatrix.js");
 var _search;
 
 (function(){
+
+  var DEBUG=false;
+
   var MAX_TESTS_PER_PAGE = 50;
-  var CHART_TEMPLATE = new Template('<div><h3>{{name}}</h3><div id="chart{{num}}" class="chart"></div></div>');
-  var DEBUG=true;
+  var CHART_TEMPLATE = new Template(
+    '<div style="padding-top:10px;">' +
+    '<h3>{{platform}} {{suite}}</h3>' +
+    '{{test}}'+
+    '<div id="chart{{num}}" class="chart" style="height:300px;width:800px;"></div>' +
+    '</div>');
+
+  var HOVER = new Template(
+    '<b>{{status|upper}}</b><br>' +
+    '<b>Branch :</b>{{branch}}<br>' +
+    '<b>Revision :</b>{{revision|left(12)}}<br>' +
+    '<b>Duration :</b>{{duration|round(3)}} seconds'
+  );
+
+  var debugFilter = {"eq": {
+    "build.platform": "linux",
+    "build.type": "pgo",
+    "run.suite": "mochitest-other"
+  }};
+
 
   _search = function(testName, dateFilter){
     Thread.run(function*(){
@@ -19,15 +40,18 @@ var _search;
         var partitions = yield (search({
           "from": "unittest",
           "groupby": [
-            {"name": "suite", "value": "run.suite"},
-            {"name": "test", "value": "result.test"},
-            {"name": "platform", "value": "build.platform"},
-            {"name": "build_type", "value": "build.type"}
+            "run.chunk",
+            "run.suite",
+            "run.type",
+            "result.test",
+            "build.platform",
+            "build.type"
           ],
           "where": {
             "and": [
               dateFilter,
-              {"regex": {"result.test": ".*" + convert.String2RegExp(testName) + ".*"}}
+              {"regex": {"result.test": ".*" + convert.String2RegExp(testName) + ".*"}},
+              DEBUG ? debugFilter : true
             ]
           },
           "limit": 100,
@@ -46,12 +70,14 @@ var _search;
       chartArea.html("");
       partitions.data.forall(function(combo, i){
         if (DEBUG && i>0) return;
-        var name = combo.platform + (combo.build_type ? ("(" + combo.build_type + ")") : "") + " " + combo.suite.toUpperCase() + ":" + combo.test;
-        chartArea.append(CHART_TEMPLATE.expand({"num": i, "name":name}));
+        var platform = combo.build.platform + (combo.build.type ? (" (" + combo.build.type + ")") : "");
+        var suite = combo.run.suite + (combo.run.chunk ? " (chunk "+run.chunk+")" : "") + (combo.run.type ? (" (" + combo.run.type + ")") : "");
+        var test = combo.result.test;
+        chartArea.append(CHART_TEMPLATE.expand({"num": i, "platform": platform, "suite": suite, "test": test}));
         combo.count = undefined;
         //PULL DATA AND SHOW CHART
         (function(i){
-            showOne("chart" + i, combo, dateFilter);
+            showOne("chart" + i, Map.zip(Map.leafItems(combo)), dateFilter);
         })(i);
       });
     });
@@ -70,22 +96,34 @@ var _search;
             "_id",
             {"name": "suite", "value": "run.suite"},
             {"name": "chunk", "value": "run.chunk"},
-            {"name": "duration", "value": "result.duration"},
+            {"name": "duration", "value": {"coalesce":["result.duration", -1]}},
             {"name": "test", "value": "result.test"},
             {"name": "platform", "value": "build.platform"},
             {"name": "build_type", "value": "build.type"},
             {"name": "build_date", "value": "build.date"},
             {"name": "branch", "value": "build.branch"},
             {"name": "revision", "value": "build.revision12"},
-            {"name": "ok", "value": "result.ok"}
+            {"name": "ok", "value": "result.ok"},
+            {
+              "name": "status",
+              "value": {
+                "case": [
+                  {"when": {"missing": "duration"}, "then": {"literal": "incomplete"}},
+                  {"when": "result.ok", "then": {"literal": "pass"}},
+                  {"literal": "fail"}
+                ]
+
+              }
+            }
           ],
           "where": {
             "and": [
-              {"neq":{"build.branch":"try"}},
+              {"neq": {"build.branch": "try"}},
               dateFilter,
               {"eq": group}
             ]
           },
+          "sort": "build.date",
           "limit": (DEBUG ? 100 : 100000),
           "format": "list"
         }));
@@ -95,70 +133,36 @@ var _search;
         Log.actionDone(a);
       }//try
 
+      {//CHART LIB DEMANDS NO POINTS OVERLAP, ADD A SECOND TO EACH LANDING ON IDENTICAL build_date
+        var last_build_date = 0;
+        var offset = 0;
+        result.data.forall(function(d, i, data){
+          if (last_build_date == d.build_date) {
+            offset++;
+            d.build_date = last_build_date + offset;
+          } else {
+            last_build_date = d.build_date;
+            offset = 0;
+          }//endif
+          d.build_date=Date.newInstance(d.build_date);
+        });
+      }
+
       a = Log.action("Make chart", true);
       try {
-        //SORT REVISIONS BY build_date
-        var revisions = (yield(qb.calc2List({
-          "from": result.data,
-          "select": {"value": "build_date", "aggregate": "min"},
-          "edges": ["revision"],
-          "sort": "build_date"
-        })));
-        revisions = revisions.list.select("revision");
-
-        var duration = (yield(Q({
-          "from": result.data,
-          "select": [
-            {"name": "build_date", "value": "Date.newInstance(build_date)", "aggregate": "min"},
-            {
-              "name": "duration",
-              "value": {
-                "when": "build_date",
-                "then": {"coalesce": ["duration", -1]}
-              },
-              "aggregate": "average"
-            }
-          ],
-          "edges": [
-            {
-              "name": "result",
-              "value": {
-                "when": "duration",
-                "then": "ok",
-                "else": {"literal": "incomplete"}
-              },
-              "domain": {
-                "type": "set", "partitions": [
-                  {"name": "pass", "value": true, "style": {"color": "#1f77b4"}},
-                  {"name": "fail", "value": false, "style": {"color": "#ff7f0e"}},
-                  {"name": "incomplete", "value": "incomplete", "style": {"color": "#d62728"}}
-                ]
-              }
-            },
-            {"value": "revision", "domain": {"partitions": revisions}}
-          ],
-          "meta": {"format": "list"}
-        })));
-
-        //ENSURE WE HAVE A duration FOR ALL ROWS
-        duration.data.forall(function(v){
-          if (v.build_date == null) {
-            v.duration = -1;
-          }//endif
-        });
-
         aChart.showScatter({
           "target": target,
-          "data": duration,
+          "data": result.data,
+          "tip":{
+            "format": HOVER
+          },
+          "click": function(d){
+            window.open(new Template('https://treeherder.mozilla.org/#/jobs?repo={{branch}}&revision={{revision}}').replace(d));
+          },
           "series": [
             {
               "axis": "color",
-              "value": {
-                "case": [
-                  {"when": {"missing": " duration"}, "then": {"literal": "incomplete"}},
-                  {"when": "ok", "then": {"literal": "pass"}, "else": {"literal": "fail"}}
-                ]
-              }
+              "value": "status"
             }
           ],
           "axis": {
@@ -167,16 +171,17 @@ var _search;
               "size": 50,
               "value": "build_date"
             },
+            "y":{
+              "value": "duration"
+            },
             "color":{
               "domain": {
                 "type": "set", "partitions": [
-                  {"name": "pass", "value": true, "style": {"color": "#1f77b4"}},
-                  {"name": "fail", "value": false, "style": {"color": "#ff7f0e"}},
+                  {"name": "pass", "value": "pass", "style": {"color": "#1f77b4"}},
+                  {"name": "fail", "value": "fail", "style": {"color": "#ff7f0e"}},
                   {"name": "incomplete", "value": "incomplete", "style": {"color": "#d62728"}}
                 ]
               }
-
-
             }
           }
         });

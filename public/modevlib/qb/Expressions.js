@@ -1,13 +1,18 @@
 function qb2function(expr){
-
   if (expr == null) return function(){
-    return null;
+    return function(){
+      return null;
+    }
   };
   if (expr === true) return function(){
-    return true;
+    return function(){
+      return true;
+    }
   };
   if (expr === false) return function(){
-    return false;
+    return function(){
+      return false;
+    }
   };
   if (isString(expr) && MVEL.isKeyword(expr)) {
     if (expr.indexOf("." == -1)) {
@@ -19,13 +24,17 @@ function qb2function(expr){
         return Map.get(value, expr);
       }
     }//endif
-  }
+  }//endif
+  if (typeof(expr)=="number"){
+    return function(){
+      return expr;
+    };//endif
+  }//endif
 
   var keys = Object.keys(expr);
   for (var i = keys.length; i--;) {
-    var key = keys[i];
-    var val = map[key];
-    if (expr[key]) return val(expr);
+    var val = expressions[keys[i]];
+    if (val) return val(expr);
   }//for
 
   Log.error("Can not handle expression `{{name}}`", {"name": keys[0]});
@@ -35,7 +44,7 @@ function qb2function(expr){
 expressions = {};
 
 expressions.when = function(expr){
-    var test = qb2function(expr.when);
+    var test = qb2function(expr.when, true);
     var pass = qb2function(expr.then);
     var fail = qb2function(expr.else);
     return function(value){
@@ -67,7 +76,9 @@ expressions.eq = function (expr) {
 
 
 expressions.literal=function(expr) {
-  return expr.literal;
+  return function(){
+    return expr.literal;
+  }
 };
 
 expressions.case = function(expr){
@@ -98,3 +109,14 @@ expressions.case = function(expr){
   //})(test, then, els_);
 
 };
+
+
+expressions.missing = function(expr){
+  var missing = qb2function(expr.missing);
+
+  return function(value){
+    return missing(value) == null;
+  }
+};
+
+

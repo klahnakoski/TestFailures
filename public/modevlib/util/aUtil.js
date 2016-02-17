@@ -237,6 +237,33 @@ var Map = {};
   Map.keys = Map.domain;
   Map.getKeys = Map.domain;
 
+  //RETURN LEAVES
+  Map.leafItems = function(map){
+    function _leaves(map, prefix){
+      var output = [];
+      var keys = Object.keys(map);
+      for (var i = keys.length; i--;) {
+        var key = keys[i];
+        var val = map[key];
+
+        var fullname = key.replaceAll(".", "\\.");
+        if (prefix) fullname=prefix+"."+fullname;
+
+        if (val==null){
+          //do nothing
+        }else if (Map.isObject(val)){
+          output.extend(_leaves(val, fullname))
+        }else{
+          output.append([fullname, val])
+        }//endif
+      }//for
+      return output;
+    }
+    return _leaves(map, null);
+  };//method
+  Map.getLeafItems = Map.leafItems;
+
+
 
   Map.isObject = function (val) {
       if (val === null) { return false;}
