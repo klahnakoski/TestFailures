@@ -12,7 +12,7 @@
 	<div class="padding">
 		<div id="description">
 			This dashboard charts test durations by push date.
-			The text box can be used for searching.
+			The text box can be used for searching by test name.
 			<ul>
 				<li>Blue - Successful</li>
 				<li>Orange - Test Failure</li>
@@ -34,15 +34,14 @@
 		<form id="search_form" style="display:inline-block;">
 			<input id="search" class="widget" style="width: 30em;height:1.4em;" type="text">
 		</form>
-		<span id="num_found" style="font-size: 0.7em"></span>
 	</div>
 
-	<div id="status" style="height:30px" layout="tr=window.tr">
+	<div id="status" style="height:30px">
 		Page Loading...
 		<span class="loading"><img src="images/spinner.gif" alt=""></span>
 	</div>
 
-	<div id="charts"></div>
+	<div id="charts">Please wait, this will take a while.</div>
 </div>
 <div id="footer" style="height:50px;text-align: center;padding: 5px 0 5px 0;background-color: #fff;z-index: 12;" layout="bl=window.bl;br=window.br;">
 	Github Issues <a href="https://github.com/klahnakoski/TestFailures/issues/new">https://github.com/klahnakoski/TestFailures/issues/new</a><br>
@@ -63,6 +62,7 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 	sidebarSlider();
 
 	function search(){
+		$("#charts").html("");
 		var testName = $("#search").val();
 		Session.URL.set("test", testName);
 
