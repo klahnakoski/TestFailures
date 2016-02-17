@@ -71,7 +71,7 @@ var _search;
       partitions.data.forall(function(combo, i){
         if (DEBUG && i>0) return;
         var platform = combo.build.platform + (combo.build.type ? (" (" + combo.build.type + ")") : "");
-        var suite = combo.run.suite + (combo.run.chunk ? " (chunk "+run.chunk+")" : "") + (combo.run.type ? (" (" + combo.run.type + ")") : "");
+        var suite = combo.run.suite + (combo.run.chunk ? " (chunk "+combo.run.chunk+")" : "") + (combo.run.type ? (" (" + combo.run.type + ")") : "");
         var test = combo.result.test;
         chartArea.append(CHART_TEMPLATE.expand({"num": i, "platform": platform, "suite": suite, "test": test}));
         combo.count = undefined;
