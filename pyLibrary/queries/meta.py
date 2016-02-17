@@ -14,7 +14,7 @@ from copy import copy
 from itertools import product
 
 from pyLibrary.meta import use_settings, DataClass
-from pyLibrary.queries import qb
+from pyLibrary.queries import qb, Schema
 from pyLibrary.queries.query import Query
 from pyLibrary.debugs.logs import Log
 from pyLibrary.dot.dicts import Dict
@@ -36,7 +36,7 @@ TEST_TABLE_PREFIX = "testing"  # USED TO TURN OFF COMPLAINING ABOUT TEST INDEXES
 
 
 
-class FromESMetadata(object):
+class FromESMetadata(Schema):
     """
     QUERY THE METADATA
     """
@@ -105,7 +105,6 @@ class FromESMetadata(object):
             for c, d in product(list(self.todo.queue), list(self.todo.queue)):
                 if c.abs_name==d.abs_name and c.table==d.table and c!=d:
                     Log.error("")
-
 
     def _get_columns(self, table=None):
         # TODO: HANDLE MORE THEN ONE ES, MAP TABLE SHORT_NAME TO ES INSTANCE
@@ -303,10 +302,8 @@ class FromESMetadata(object):
                             self.todo.extend(old_columns)
                             # TEST CONSISTENCY
                             for c, d in product(list(self.todo.queue), list(self.todo.queue)):
-                                if c.abs_name==d.abs_name and c.table==d.table and c!=d:
+                                if c.abs_name == d.abs_name and c.table == d.table and c != d:
                                     Log.error("")
-
-
                         else:
                             Log.note("no more metatdata to update")
 

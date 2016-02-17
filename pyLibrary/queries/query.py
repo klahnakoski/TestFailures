@@ -20,11 +20,11 @@ from pyLibrary.dot import wrap, unwrap, listwrap
 from pyLibrary.dot.dicts import Dict
 from pyLibrary.dot.lists import DictList
 from pyLibrary.maths import Math
-from pyLibrary.queries import wrap_from
+from pyLibrary.queries import wrap_from, Schema
 from pyLibrary.queries.containers import Container
 from pyLibrary.queries.dimensions import Dimension
 from pyLibrary.queries.domains import Domain, is_keyword
-from pyLibrary.queries.expressions import TRUE_FILTER, simplify_esfilter, query_get_all_vars
+from pyLibrary.queries.expressions import TRUE_FILTER, simplify_esfilter, query_get_all_vars, qb_expression, TrueOp
 
 DEFAULT_LIMIT = 10
 MAX_LIMIT = 10000
@@ -38,7 +38,7 @@ def _late_import():
     global _Column
 
     from pyLibrary.queries.meta import Column as _Column
-    from pyLibrary.queries import qb
+    from pyLibrary.queries import qb as _qb
 
     _ = _qb
     _ = _Column
@@ -67,6 +67,8 @@ class Query(object):
 
         self.format = query.format
         self.frum = wrap_from(query["from"], schema=schema)
+        if not schema and isinstance(self.frum, Schema):
+            schema = self.frum
 
         select = query.select
         if isinstance(select, list):
@@ -196,7 +198,7 @@ def _normalize_select(select, schema=None):
             )
 
         if schema:
-            s = schema[select]
+            s = schema.get_column(select)
             if s:
                 if isinstance(s, _Column):
                     return Dict(
@@ -378,13 +380,9 @@ def _normalize_range(range):
 
 
 def _normalize_where(where, schema=None):
-    where = wrap(where)
     if where == None:
-        return TRUE_FILTER
-    if schema == None:
-        return where
-    where = simplify_esfilter(_where_terms(where, where, schema))
-    return where
+        return TrueOp()
+    return qb_expression(where)
 
 
 def _map_term_using_schema(master, path, term, schema_edges):
