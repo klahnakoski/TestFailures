@@ -35,7 +35,7 @@ var _search;
   _search = function(testName, dateFilter){
     Thread.run(function*(){
       //WHAT DIMENSION ARE WE SHOWING?
-      var a = Log.action("find platforms...", true);
+      var a = Log.action("Find platforms.  This will take a while...", true);
       try {
         var partitions = yield (search({
           "from": "unittest",
