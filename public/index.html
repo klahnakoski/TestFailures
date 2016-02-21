@@ -41,7 +41,7 @@
 		<span class="loading"><img src="images/spinner.gif" alt=""></span>
 	</div>
 
-	<div id="charts">Please wait, this will take a while.</div>
+	<div id="charts">Please wait, this may take a while.</div>
 </div>
 <div id="footer" style="height:50px;text-align: center;padding: 5px 0 5px 0;background-color: #fff;z-index: 12;" layout="bl=window.bl;br=window.br;">
 	Github Issues <a href="https://github.com/klahnakoski/TestFailures/issues/new">https://github.com/klahnakoski/TestFailures/issues/new</a><br>
@@ -60,6 +60,8 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 
 	layoutAll();
 	sidebarSlider();
+
+	$("#charts").html("");
 
 	function search(){
 		$("#charts").html("");

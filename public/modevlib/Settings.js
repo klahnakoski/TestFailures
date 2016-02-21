@@ -81,13 +81,13 @@ importScript("charts/aColor.js");
 
 
       // ACTIVE DATA TABLES
-      "branches": {"style" : {"background-color" : blue}, "host" : "http://activedata.allizom.org", "table":"branches", "host_type":"ActiveData"},
-      "jobs": {"style" : {"background-color" : blue}, "host" : "http://activedata.allizom.org", "table":"jobs", "host_type":"ActiveData"},
-      "jobs.action.timings": {"style" : {"background-color" : blue}, "host" : "http://activedata.allizom.org", "table":"jobs.action.timings", "host_type":"ActiveData"},
+      "branches": {"style" : {"background-color" : blue}, "host" : "https://activedata.allizom.org", "table":"branches", "host_type":"ActiveData"},
+      "jobs": {"style" : {"background-color" : blue}, "host" : "https://activedata.allizom.org", "table":"jobs", "host_type":"ActiveData"},
+      "jobs.action.timings": {"style" : {"background-color" : blue}, "host" : "https://activedata.allizom.org", "table":"jobs.action.timings", "host_type":"ActiveData"},
       "local_jobs.action.timings": {"style" : {"background-color" : blue}, "host" : "http://localhost:5000", "table":"jobs.action.timings", "host_type":"ActiveData"},
-      "timings": {"style" : {"background-color" : blue}, "host" : "http://activedata.allizom.org", "table":"jobs.action.timings", "host_type":"ActiveData"},
-      "unittests": {"style" : {"background-color" : blue}, "host" : "http://activedata.allizom.org", "table":"unittest", "host_type":"ActiveData"},
-      "perf": {"style" : {"background-color" : blue}, "host" : "http://activedata.allizom.org", "table":"perf", "host_type":"ActiveData"}
+      "timings": {"style" : {"background-color" : blue}, "host" : "https://activedata.allizom.org", "table":"jobs.action.timings", "host_type":"ActiveData"},
+      "unittests": {"style" : {"background-color" : blue}, "host" : "https://activedata.allizom.org", "table":"unittest", "host_type":"ActiveData"},
+      "perf": {"style" : {"background-color" : blue}, "host" : "https://activedata.allizom.org", "table":"perf", "host_type":"ActiveData"}
 
     },
 
