@@ -149,6 +149,12 @@ var _search;
       }
 
       a = Log.action("Make chart", true);
+      if (result.data.length==0){
+        $("#"+target).html("no data");
+        return;
+      }//endif
+
+
       try {
         aChart.showScatter({
           "target": target,
