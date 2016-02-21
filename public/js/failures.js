@@ -20,9 +20,11 @@ var _search;
 
   var HOVER = new Template(
     '<b>{{status|upper}}</b><br>' +
-    '<b>Branch :</b>{{branch}}<br>' +
-    '<b>Revision :</b>{{revision|left(12)}}<br>' +
-    '<b>Duration :</b>{{duration|round(3)}} seconds'
+    '<b>Branch:</b> {{branch}}<br>' +
+    '<b>Build Date:</b> {{build_date|format("NNN dd, HH:mm:ss")}}<br>' +
+    '<b>Revision:</b> {{revision|left(12)}}<br>' +
+    '<b>Duration:</b> {{duration|round(3)}} seconds<br>'+
+    '<b>Chunk:</b> {{chunk}}'
   );
 
   var debugFilter = {"eq": {
@@ -40,7 +42,6 @@ var _search;
         var partitions = yield (search({
           "from": "unittest",
           "groupby": [
-            "run.chunk",
             "run.suite",
             "run.type",
             "result.test",
@@ -49,8 +50,8 @@ var _search;
           ],
           "where": {
             "and": [
-              {"gte": {"run.timestamp": dateRange.min.unix()}},
-              {"lt": {"run.timestamp": dateRange.max.unix()}},
+              {"gte": {"build.date": dateRange.min.unix()}},
+              {"lt": {"build.date": dateRange.max.unix()}},
               {"regex": {"result.test": ".*" + convert.String2RegExp(testName) + ".*"}},
               DEBUG ? debugFilter : true
             ]
@@ -72,7 +73,7 @@ var _search;
       partitions.data.forall(function(combo, i){
         if (DEBUG && i>0) return;
         var platform = combo.build.platform + (combo.build.type ? (" (" + combo.build.type + ")") : "");
-        var suite = combo.run.suite + (combo.run.chunk ? " (chunk "+combo.run.chunk+")" : "") + (combo.run.type ? (" (" + combo.run.type + ")") : "");
+        var suite = combo.run.suite + (combo.run.type ? (" (" + combo.run.type + ")") : "");
         var test = combo.result.test;
         chartArea.append(CHART_TEMPLATE.expand({"num": i, "platform": platform, "suite": suite, "test": test}));
         combo.count = undefined;
@@ -120,8 +121,8 @@ var _search;
           "where": {
             "and": [
               {"neq": {"build.branch": "try"}},
-              {"gte": {"run.timestamp": dateRange.min.unix()}},
-              {"lt": {"run.timestamp": dateRange.max.unix()}},
+              {"gte": {"build.date": dateRange.min.unix()}},
+              {"lt": {"build.date": dateRange.max.unix()}},
               {"eq": group}
             ]
           },
