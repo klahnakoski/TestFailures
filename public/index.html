@@ -53,10 +53,10 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 	var RECENT_DATE = Date.today().subtract(Duration.WEEK);
 	var TO_DATE = Date.now().floor(Duration.DAY);
 
-	var dateFilter = {"and":[
-		{"gte": {"run.timestamp": RECENT_DATE.unix()}},
-        {"lt": {"run.timestamp": TO_DATE.unix()}}
-	]};
+	var dateRange = {
+		"min": RECENT_DATE,
+		"max": TO_DATE
+	};
 
 	layoutAll();
 	sidebarSlider();
@@ -68,7 +68,7 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 		var testName = $("#search").val();
 		Session.URL.set("test", testName);
 
-		_search(testName, dateFilter);
+		_search(testName, dateRange);
 		return false;
 	}//function
 
@@ -80,7 +80,7 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 	var params = Session.URL.getFragment();
 	if (params.test){
 		search_box.val(params.test);
-		_search(params.test, dateFilter);
+		_search(params.test, dateRange);
 	}//endif
 	search_box.focus();
 

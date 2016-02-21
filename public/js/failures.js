@@ -10,7 +10,7 @@ var _search;
 
   var DEBUG=false;
 
-  var MAX_TESTS_PER_PAGE = 50;
+  var MAX_TESTS_PER_PAGE = 100;
   var CHART_TEMPLATE = new Template(
     '<div style="padding-top:10px;">' +
     '<h3>{{platform}} {{suite}}</h3>' +
@@ -32,7 +32,7 @@ var _search;
   }};
 
 
-  _search = function(testName, dateFilter){
+  _search = function(testName, dateRange){
     Thread.run(function*(){
       //WHAT DIMENSION ARE WE SHOWING?
       var a = Log.action("Find platforms.  This will take a while...", true);
@@ -49,7 +49,8 @@ var _search;
           ],
           "where": {
             "and": [
-              dateFilter,
+              {"gte": {"run.timestamp": dateRange.min.unix()}},
+              {"lt": {"run.timestamp": dateRange.max.unix()}},
               {"regex": {"result.test": ".*" + convert.String2RegExp(testName) + ".*"}},
               DEBUG ? debugFilter : true
             ]
@@ -77,14 +78,14 @@ var _search;
         combo.count = undefined;
         //PULL DATA AND SHOW CHART
         (function(i){
-            showOne("chart" + i, Map.zip(Map.leafItems(combo)), dateFilter);
+            showOne("chart" + i, Map.zip(Map.leafItems(combo)), dateRange);
         })(i);
       });
     });
   };//function
 
 
-  function showOne(target, group, dateFilter){
+  function showOne(target, group, dateRange){
     Thread.run(function*(){
 
       var a = Log.action("find test results", true);
@@ -119,7 +120,8 @@ var _search;
           "where": {
             "and": [
               {"neq": {"build.branch": "try"}},
-              dateFilter,
+              {"gte": {"run.timestamp": dateRange.min.unix()}},
+              {"lt": {"run.timestamp": dateRange.max.unix()}},
               {"eq": group}
             ]
           },
@@ -175,7 +177,8 @@ var _search;
             "x": {
               "format": "{{.|format('NNN dd, HH:mm')}}",
               "size": 50,
-              "value": "build_date"
+              "value": "build_date",
+              "range": dateRange
             },
             "y":{
               "value": "duration"
