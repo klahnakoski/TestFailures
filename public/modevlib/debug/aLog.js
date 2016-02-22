@@ -246,9 +246,9 @@ var Log = new function(){
   Log.action=function(message, waitForDone){
     var action={"message":message, "start":Date.now()};
 
-    if (message.length>30){
-      message=message.left(27)+"...";
-    }//endif
+    //if (message.length>30){
+    //  message=message.left(27)+"...";
+    //}//endif
 
     Log.actionStack.push(action);
     $("#status").html(message);

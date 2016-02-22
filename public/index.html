@@ -65,7 +65,7 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 
 	function search(){
 		$("#charts").html("");
-		var testName = $("#search").val();
+		var testName = $("#search").val().trim();
 		Session.URL.set("test", testName);
 
 		_search(testName, dateRange);

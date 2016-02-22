@@ -49,8 +49,8 @@ var _search;
           ],
           "where": {
             "and": [
-              {"gte": {"run.timestamp": dateRange.min.unix()}},
-              {"lt": {"run.timestamp": dateRange.max.unix()}},
+              {"gte": {"build.date": dateRange.min.unix()}},
+              {"lt": {"build.date": dateRange.max.unix()}},
               {"regex": {"result.test": ".*" + convert.String2RegExp(testName) + ".*"}},
               DEBUG ? debugFilter : true
             ]
@@ -63,9 +63,12 @@ var _search;
       }//try
 
       var chartArea = $("#charts");
-      if (partitions.data.length>MAX_TESTS_PER_PAGE){
-        chartArea.html(partitions.data.length+" is too many combinations");
-        yield (null);
+      if (partitions.data.length>MAX_TESTS_PER_PAGE) {
+        chartArea.html(partitions.data.length + " is too many combinations");
+        return;
+      }else if (partitions.data.length==0){
+        chartArea.html("Test not found");
+        return;
       }//endif
 
       chartArea.html("");
@@ -120,8 +123,8 @@ var _search;
           "where": {
             "and": [
               {"neq": {"build.branch": "try"}},
-              {"gte": {"run.timestamp": dateRange.min.unix()}},
-              {"lt": {"run.timestamp": dateRange.max.unix()}},
+              {"gte": {"build.date": dateRange.min.unix()}},
+              {"lt": {"build.date": dateRange.max.unix()}},
               {"eq": group}
             ]
           },
