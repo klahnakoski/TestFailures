@@ -40,7 +40,7 @@ build = function(){
     currentTimestamp = Date.now;
   }//endif
 
-  var DEBUG = false;
+	var DEBUG = true;
   var POPUP_ON_ERROR = true;
   var FIRST_BLOCK_TIME = 500;  //TIME UNTIL YIELD
   var NEXT_BLOCK_TIME = 150;  //THE MAXMIMUM TIME (ms) A PIECE OF CODE SHOULD HOG THE MAIN THREAD
@@ -396,6 +396,53 @@ build = function(){
     return Thread.join(this, timeout);
   };
 
+
+	/*
+	 * RESUME WHEN ANY THREAD (IN arguments) IS COMPLETE, IGNORE THE REST
+	 */
+	Thread.joinAny=function*(){
+		var otherThreads = arguments;
+		var resumeCurrentThread = yield(Thread.Resume);
+
+		var joinNow = (function(resumeCurrentThread){
+			for(var i=0;i<otherThreads.length;i++){
+				var otherThread=otherThreads[i];
+				if (DEBUG)
+					while (otherThread.keepRunning) {
+						yield(Thread.sleep(1000));
+						if (otherThread.keepRunning)
+							Log.note("Waiting for thread");
+					}//while
+
+				if (!otherThread.keepRunning) {
+					resumeCurrentThread = null;
+					yield (otherThread.threadResponse);
+					return true;  //joinNow==true
+				}//endif
+
+				//WE WILL SIMPLY MAKE THE JOINING THREAD LOOK LIKE THE otherThread's CALLER
+				//(WILL ALSO PACKAGE ANY EXCEPTIONS THAT ARE THROWN FROM otherThread)
+				var gen = Thread_join_resume(function(){
+					if (resumeCurrentThread) {
+						var temp = resumeCurrentThread;
+						resumeCurrentThread = null;
+						temp(retval)
+					}//endif
+				});
+				gen.next();  //THE FIRST CALL TO next()
+				otherThread.stack.unshift(gen);
+				if (DEBUG) {
+					Log.note("pausing thread " + Thread.currentThread.name + " while joining " + otherThread.name)
+				}//endif
+			}//for
+			return false;  //joinNow==false; WE MUST WAIT
+		})(resumeCurrentThread);
+
+		if (!joinNow){
+			yield (Thread.suspend());
+		}//endif
+	};
+
   //WAIT FOR OTHER THREAD TO FINISH
   Thread.join = function*(otherThread, timeout){
     var children = otherThread.children.slice(); //copy
@@ -419,9 +466,7 @@ build = function(){
         //WE WILL SIMPLY MAKE THE JOINING THREAD LOOK LIKE THE otherThread's CALLER
         //(WILL ALSO PACKAGE ANY EXCEPTIONS THAT ARE THROWN FROM otherThread)
         var resumeWhenDone = yield(Thread.Resume);
-        var gen = Thread_join_resume(function(retval){
-          resumeWhenDone(retval);
-        });
+        var gen = Thread_join_resume(resumeWhenDone);
         gen.next();  //THE FIRST CALL TO next()
         otherThread.stack.unshift(gen);
         if (DEBUG){

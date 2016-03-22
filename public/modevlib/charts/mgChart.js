@@ -8,8 +8,6 @@ importScript("../qb/Expressions.js");
 importScript("tools.js");
 
 (function(){
-  var DEBUG = true;
-
 
   window.aChart = window.aChart || {};
 
@@ -207,9 +205,6 @@ importScript("tools.js");
       })(new Template(xax_format));
     }//endif
 
-    if (DEBUG) {
-      Log.note(convert.value2json(data));
-    }//endif
     var chartParams = {
       title: Map.get(params, "title.label"),
       description: Map.get(params, "title.description"),

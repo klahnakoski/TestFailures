@@ -4,13 +4,12 @@ importScript("../modevlib/layouts/layout.js");
 importScript("../modevlib/collections/aMatrix.js");
 
 
-var _search;
+var _perf_search;
 
 (function(){
 
-  var DEBUG=false;
+  var DEBUG=true;
 
-  var MAX_TESTS_PER_PAGE = 100;
   var CHART_TEMPLATE = new Template(
     '<div style="padding-top:10px;">' +
     '<h3>{{platform}} {{suite}}</h3>' +
@@ -19,88 +18,99 @@ var _search;
     '</div>');
 
   var HOVER = new Template(
-    '<b>{{status|upper}}</b><br>' +
     '<b>Branch:</b> {{branch}}<br>' +
     '<b>Build Date:</b> {{build_date|format("NNN dd, HH:mm:ss")}}<br>' +
     '<b>Revision:</b> {{revision|left(12)}}<br>' +
-    '<b>Duration:</b> {{duration|round(3)}} seconds<br>'+
-    '<b>Chunk:</b> {{chunk}}'
+    '<b>Duration:</b> {{duration|round(3)}} seconds<br>'
   );
 
-  var debugFilter = {"eq": {
-    "build.platform": "linux",
-    "build.type": "pgo",
-    "run.suite": "mochitest-other"
-  }};
+  var debugFilter = {"eq": {"build.platform": "win32", "result.test":"ext.html.30"}};
 
-  _search = function(testName, dateRange){
-    var partitions=null;
-    var a = Log.action("Find platforms.  This will take a while...", true);
-
-    var regexThread=Thread.run(function*(){
-      var p = yield (search({
-        "from": "unittest",
-        "groupby": [
-          "run.suite",
-          "run.type",
-          "result.test",
-          "build.platform",
-          "build.type"
-        ],
-        "where": {
-          "and": [
-            {"gte": {"build.date": dateRange.min.unix()}},
-            {"lt": {"build.date": dateRange.max.unix()}},
-            {"regex": {"result.test": ".*" + convert.String2RegExp(testName) + ".*"}},
-            DEBUG ? debugFilter : true
-          ]
-        },
-        "limit": 100,
-        "format": "list"
-      }));
-      if (!partitions) partitions=p
-    });
-
-    var termsThread=Thread.run(function*(){
-      var p = yield (search({
-        "from": "unittest",
-        "groupby": [
-          "run.suite",
-          "run.type",
-          "result.test",
-          "build.platform",
-          "build.type"
-        ],
-        "where": {
-          "and": [
-            {"gte": {"build.date": dateRange.min.unix()}},
-            {"lt": {"build.date": dateRange.max.unix()}},
-            {"eq": {"result.test": testName}},
-            DEBUG ? debugFilter : true
-          ]
-        },
-        "limit": 100,
-        "format": "list"
-      }));
-      if (!partitions) partitions=p;
-    });
+  _perf_search = function(suiteName, dateRange){
+    partitions
 
     Thread.run(function*(){
-      try{
-        yield (Thread.joinAny(regexThread, termsThread));
+
+      Thread.run(function*(){
+        //WHAT DIMENSION ARE WE SHOWING?
+        var a = Log.action("Find platforms.  This will take a while...", true);
+        try {
+          var partitions = yield (search({
+            "from": "perf",
+            "groupby": [
+              "run.suite",
+              "run.type",
+              "result.test",
+              "build.platform",
+              "build.type"
+            ],
+            "where": {
+              "and": [
+                {"gte": {"build.date": dateRange.min.unix()}},
+                {"lt": {"build.date": dateRange.max.unix()}},
+                {"eq": {"run.suite": suiteName}},
+                DEBUG ? debugFilter : true
+              ]
+            },
+            "limit": 100,
+            "format": "list"
+          }));
+        } finally {
+          Log.actionDone(a);
+        }//try
 
         var chartArea = $("#charts");
-        if (partitions.data.length>MAX_TESTS_PER_PAGE) {
-          chartArea.html(partitions.data.length + " is too many combinations");
-          return;
-        }else if (partitions.data.length==0){
+        if (partitions.data.length == 0) {
           chartArea.html("Test not found");
           return;
         }//endif
+      });
 
+
+      Thread.run(function*(){
+        //WHAT DIMENSION ARE WE SHOWING?
+        var a = Log.action("Find platforms.  This will take a while...", true);
+        try {
+          var partitions = yield (search({
+            "from": "perf",
+            "groupby": [
+              "run.suite",
+              "run.type",
+              "result.test",
+              "build.platform",
+              "build.type"
+            ],
+            "where": {
+              "and": [
+                {"gte": {"build.date": dateRange.min.unix()}},
+                {"lt": {"build.date": dateRange.max.unix()}},
+                {"eq": {"run.suite": suiteName}},
+                DEBUG ? debugFilter : true
+              ]
+            },
+            "limit": 100,
+            "format": "list"
+          }));
+        } finally {
+          Log.actionDone(a);
+        }//try
+
+        var chartArea = $("#charts");
+        if (partitions.data.length == 0) {
+          chartArea.html("Test not found");
+          return;
+        }//endif
+      });
+
+
+
+
+
+      Thread.run(function*(){
         chartArea.html("");
         partitions.data.forall(function(combo, i){
           if (DEBUG && i>0) return;
+          if (i>100) return;
           var platform = combo.build.platform + (combo.build.type ? (" (" + combo.build.type + ")") : "");
           var suite = combo.run.suite + (combo.run.type ? (" (" + combo.run.type + ")") : "");
           var test = combo.result.test;
@@ -108,17 +118,15 @@ var _search;
           combo.count = undefined;
           //PULL DATA AND SHOW CHART
           (function(i){
-              showOne("chart" + i, Map.zip(Map.leafItems(combo)), dateRange);
+            showOne("chart" + i, Map.zip(Map.leafItems(combo)), dateRange);
           })(i);
         });
+      });
 
-      } finally {
-        Log.actionDone(a);
-      }//try
+
+
 
     });
-
-
   };//function
 
 
@@ -129,30 +137,17 @@ var _search;
       try {
         //PULL FAILURE DETAILS
         var result = yield (search({
-          "from": "unittest",
+          "from": "perf",
           "select": [
             "_id",
             {"name": "suite", "value": "run.suite"},
-            {"name": "chunk", "value": "run.chunk"},
-            {"name": "duration", "value": {"coalesce":["result.duration", -1]}},
+            {"name": "duration", "value": "result.stats.median"},
             {"name": "test", "value": "result.test"},
             {"name": "platform", "value": "build.platform"},
             {"name": "build_type", "value": "build.type"},
             {"name": "build_date", "value": "build.date"},
             {"name": "branch", "value": "build.branch"},
-            {"name": "revision", "value": "build.revision12"},
-            {"name": "ok", "value": "result.ok"},
-            {
-              "name": "status",
-              "value": {
-                "case": [
-                  {"when": {"missing": "duration"}, "then": {"literal": "incomplete"}},
-                  {"when": "result.ok", "then": {"literal": "pass"}},
-                  {"literal": "fail"}
-                ]
-
-              }
-            }
+            {"name": "revision", "value": "build.revision12"}
           ],
           "where": {
             "and": [
@@ -163,7 +158,7 @@ var _search;
             ]
           },
           "sort": "build.date",
-          "limit": (DEBUG ? 100 : 100000),
+          "limit":100000,
           "format": "list"
         }));
       } catch (e) {
@@ -221,12 +216,10 @@ var _search;
               "value": "duration"
             },
             "color":{
+              "value": "branch",
               "domain": {
-                "type": "set", "partitions": [
-                  {"name": "pass", "value": "pass", "style": {"color": "#1f77b4"}},
-                  {"name": "fail", "value": "fail", "style": {"color": "#ff7f0e"}},
-                  {"name": "incomplete", "value": "incomplete", "style": {"color": "#d62728"}}
-                ]
+                "type": "set",
+                "partitions": Array.union(result.data.select("branch"))
               }
             }
           }
@@ -239,6 +232,5 @@ var _search;
     });
 
   }//function
-
 
 })();
