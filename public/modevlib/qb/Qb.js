@@ -1227,7 +1227,12 @@ function joinField(path){
       }else if (col.name=="."){
         index = "";
       } else if (MVEL.isKeyword(col.name)) {
-        index = "["+splitField(col.name).map(convert.String2Quote).join("][")+"]";
+        var path = splitField(col.name);
+        if (path[path.length-1]=="length"){
+          index = "["+path.substring(0, path.length-1).map(convert.String2Quote).join("][")+"].length";
+        }else{
+          index = "["+path.map(convert.String2Quote).join("][")+"]";
+        }//endif
       } else if (columns.select("name").contains(col.name)) {
         index = "["+convert.String2Quote(col.name)+"]";
       } else {

@@ -37,7 +37,7 @@ var _search;
     var partitions=null;
     var a = Log.action("Find platforms.  This will take a while...", true);
 
-    var regexThread=Thread.run(function*(){
+    var regexThread=Thread.run("regex", function*(){
       var p = yield (search({
         "from": "unittest",
         "groupby": [
@@ -61,7 +61,7 @@ var _search;
       if (!partitions) partitions=p
     });
 
-    var termsThread=Thread.run(function*(){
+    var termsThread=Thread.run("terms", function*(){
       var p = yield (search({
         "from": "unittest",
         "groupby": [
@@ -85,9 +85,9 @@ var _search;
       if (!partitions) partitions=p;
     });
 
-    Thread.run(function*(){
+    Thread.run("charting", function*(){
       try{
-        yield (Thread.joinAny(regexThread, termsThread));
+        yield (Thread.joinAny([regexThread, termsThread]));
 
         var chartArea = $("#charts");
         if (partitions.data.length>MAX_TESTS_PER_PAGE) {
