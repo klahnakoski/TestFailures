@@ -23,6 +23,7 @@ from pyLibrary.thread.threads import Thread, Signal
 from pyLibrary.times.dates import Date
 from pyLibrary.times.durations import WEEK
 
+
 ACTIVEDATA = "http://activedata.allizom.org/query"
 SUITES = ["mochitest"]
 EXCLUDE_PLATFORMS = []
@@ -82,7 +83,7 @@ def agg(destination, please_stop):
                 ],
                 "where": {"and": [
                     {"prefix": {"run.suite": suite}},
-                    {"gt": {"build.date": (Date.today() - WEEK).unix}},
+                    {"gt": {"build.date": (now - WEEK).unix}},
                     {"not": {"in": {"build.platform": EXCLUDE_PLATFORMS}}},
                     {"in": {"result.test": tests.test}}
                 ]},
@@ -92,7 +93,8 @@ def agg(destination, please_stop):
 
             # FOR EACH TEST, CALCULATE THE "RECENTLY BAD" STATISTIC (linear regression slope)
             for t in tests_summary.data:
-                t._id = t.build.platform + "-" + t.build.type + "-" + coalesce(t.run.type, "") + "-" + t.run.suite + "-" + t.test
+                t._id = t.build.platform + "-" + t.build.type + "-" + coalesce(t.run.type, "") + "-" + t.run.suite + "-" + t.test + "-" + unicode(now.unix)
+                t.timestamp = now
                 t.average = t.y.avg
                 if t.x.var == 0:
                     t.slope = None
