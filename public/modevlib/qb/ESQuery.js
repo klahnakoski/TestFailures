@@ -122,7 +122,6 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 
 	//ENSURE COLUMNS FOR GIVEN INDEX/QUERY ARE LOADED, AND MVEL COMPILATION WORKS BETTER
 	ESQuery.loadColumns = function*(query){
-		Log.note("****** call to loadColumns");
 		var indexName = null;
 		if (typeof(query) == 'string') {
 			indexName = query;
@@ -144,23 +143,23 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 
 		//WE MANAGE ALL THE REQUESTS FOR THE SAME SCHEMA, DELAYING THEM IF THEY COME IN TOO FAST
 		if (indexInfo.fetcher === undefined) {
-			indexInfo.fetcher = Thread.run(function*(){
+			indexInfo.fetcher = Thread.run("fetch columns", function*(){
 				var currInfo = indexInfo;
 				var depth = 0;
 				var attempts = [];
-				var schemas = [];
 				var info = [];
 
 				//TRY ALL HOSTS AND PATHS
 				while (currInfo !== undefined) {
 					info[depth] = currInfo;
-					schemas[depth] = null;
-					(function(ii, d){
-						attempts[d] = Thread.run(function*(){
-							try {
-								schemas[d] = yield (ESQuery.loadSchema(query, indexName, ii));
+					(function(currInfo, d){
+						attempts[d] = Thread.run("load " + currInfo.name, function*(){
+							try{
+								var schema = yield (ESQuery.loadSchema(query, indexName, currInfo));
+								if (!schema) Log.error("Could not get schema from " + currInfo.name);
+								yield ([schema, currInfo]);
 							}catch(e){
-								Log.error("Exception getting schema " + d, e);
+								Log.warning("failure loading " + currInfo.name, e)
 							}//try
 						});
 					})(currInfo, depth);
@@ -168,58 +167,46 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 					depth++;
 				}//while
 
-				//FIND THE FIRST TO RESPOND
+				//HOPEFULLY THE FIRST CLUSTER WILL RESPOND
 				var schema = null;
-				while (schema == null) {
-					var hope = false;
-					try {
-						for (var s = 0; s < schemas.length; s++) {
-							if (attempts[s].keepRunning){
-								Log.note("****** attempting #"+s);
-								hope = true;
-								yield (attempts[s].join(900));  //WE WILL ONLY WAIT FOR THE FIRST
-								Log.note("****** done #"+s);
-								break;
-							}else if (schemas[s] != null) {
-								hope=true;
-							}//endif
-						}//for
-					} catch (e) {
-						//DO NOTHING
-					}//try
-					if (!hope) {
-						yield (Exception("Can not locate any cluster"));
+				try {
+					var pair = yield (Thread.join(attempts[0], 900));
+					if (pair && isArray(pair)) {
+						[schema, currInfo] = pair;
 					}//endif
+				} catch (e) {
+					Log.warning("problem with join", e)
+				}//try
 
-					Log.note("****** Scanning for schemas");
-					for (var s = 0; s < schemas.length; s++) {
-						if (schemas[s] != null) {
-							Log.note("****** schema "+s+" captured");
-							currInfo = info[s];
-							schema = schemas[s];
+				//WE WILL ACCEPT ANY CLUSTER RESPONSE NOW
+				if (!schema) {
+					try {
+						[schema, currInfo] = yield (Thread.joinAny(attempts));
+					} catch (e) {
+						Log.error("Can not locate any cluster", e);
+					}//try
+				}//endif
 
-							attempts.forall(function(a, i){
-								Log.note("****** killing "+i);
-								a.kill();
-							});
-
-							break;
-						}//endif
-					}//for
-				}//while
+				//GOT ONE, KILL THE REST
+				Log.note("killing other requests");
+				attempts.forall(function(a){
+					try {
+						a.kill()
+					} catch (e) {
+						Log.warning("failed to kill", e)
+					}//try
+				});
+				Log.note("done killing");
 
 				Map.copy(currInfo, indexInfo);
 				var properties = schema.properties;
 				indexInfo.columns = ESQuery.parseColumns(indexName, undefined, properties);
-
-				Log.note("****** done schema request");
+				Log.note("done parse properties");
 				yield(null);
 			});
 		}//endif
 
 		yield (Thread.join(indexInfo.fetcher));
-
-		Log.note("****** done loadColumns()");
 		yield (null);
 	};//method
 
@@ -717,11 +704,15 @@ ESQuery.NOT_SUPPORTED = "From clause not supported \n{{from}}";
 		if (edge.domain.isFacet) {
 			//MUST USE THIS' esFacet
 			var condition = coalesce(partition.esfilter, {"and": []});
+			if (!condition.and)	condition = {"and":[condition]};
 
 			if (qb.domain.ALGEBRAIC.contains(edge.domain.type)) {
 				condition.and.push({
 					"range": Map.newInstance(edge.value, {"gte": MVEL.Value2Query(partition.min), "lt": MVEL.Value2Query(partition.max)})
 				});
+			} else if (edge.value === undefined) {
+				//MUST USE THIS' esFacet, AND NOT(ALL THOSE ABOVE)
+				return ESFilter.simplify(partition.esfilter);
 			} else if (edge.domain.type == "set") {
 				condition.and.push({
 					"term": Map.newInstance(edge.value, edge.domain.getKey(partition))

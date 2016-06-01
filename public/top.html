@@ -1,0 +1,147 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<HTML>
+<HEAD>
+	<script type="text/javascript" src="modevlib/imports/import.js"></script>
+</HEAD>
+<BODY>
+
+<div id="sidebar" layout="tl=window.tl;bottom=footer.bottom;" style="width:0;overflow:hidden;">
+	<div class="padding">
+		<div id="description">
+			This dashboard charts test durations by push date.
+			The text box can be used for searching by test name.
+			<ul>
+				<li>Blue - Successful</li>
+				<li>Orange - Test Failure</li>
+				<li>Red - Timeout (duration = -1 second)</li>
+			</ul>
+		</div>
+		<hr>
+		<div id="filters" style="width:300px;" class="menu">
+		</div>
+		<div id="parameters" style="display:none;">
+		</div>
+	</div>
+</div>
+<div id="sidebar_name" class="sidebar_name" layout="top=window.top;bottom=footer.top;left=sidebar.right;">
+	<div>Configuration</div>
+</div>
+<div id="content" style="padding: 10px 10px 50px 10px;" layout="tr=page.tr;left=sidebar_name.right;">
+	<div id="status" style="height:30px">
+		Page Loading...
+		<span class="loading"><img src="images/spinner.gif" alt=""></span>
+	</div>
+
+	<div id="bad">
+
+	</div>
+
+	<div id="recent">
+
+	</div>
+</div>
+<div id="footer" style="height:50px;text-align: center;padding: 5px 0 5px 0;background-color: #fff;z-index: 12;" layout="bl=window.bl;br=window.br;">
+	Github Issues <a href="https://github.com/klahnakoski/TestFailures/issues/new">https://github.com/klahnakoski/TestFailures/issues/new</a><br>
+	Code <a href="https://github.com/klahnakoski/TestFailures/blob/master/html/failures.html">https://github.com/klahnakoski/TestFailures/blob/master/html/top.html</a>
+</div>
+
+<script type="application/javascript">
+importScript(['js/util.js', 'js/failures.js', 'modevlib/gui/GUI.js', 'css/menu.css'], function(){
+	layoutAll();
+	sidebarSlider();
+
+	var thread;
+	var createChart = function(){
+		if (thread !== undefined)
+			thread.kill();
+		thread = Thread.run("chart", __createChart());
+	};
+
+	var __createChart = function * (){
+		var dateRange = {
+			"min": Date.newInstance(GUI.state.sampleMin),
+			"max": Date.newInstance(GUI.state.sampleMax) + Duration.DAY
+		};
+
+		// TOP TEN BAD
+		Thread.run("get bad", function*(){
+			var failures = yield (query({
+				"from": "failures",
+				"select": [
+					"test",
+					{"name": "fail_rate", "value": "fails.avg"}
+				],
+				"where": {"eq": {"timestamp": Date.today().unix()}},
+				"sort": {"value": "fails.avg", "sort": -1},
+				"limit": 10,
+				"format": "list"
+			}));
+
+			showDetails("bad", failures.data);
+		});
+
+//		// TOP 10 RECENT BAD
+//		Thread.run("get recent", function*(){
+//			var recent = yield (query({
+//				"from": "failures",
+//				"select": [
+//					"test"
+//				],
+//				"where": {"gte": {"timestamp": Date.today().subtract(Duration.WEEK).unix()}},
+//				"sort": {"value": "slope", "sort": -1},
+//				"limit": 100
+//			}));
+//
+//			showDetails("recent", recent.data);
+//		})
+
+
+	};
+
+
+	$(document).ready(function(){
+		GUI.setup(
+			createChart,
+			[
+				{
+					"id": "sampleMin",
+					"name": "Start Date",
+					"type": "date",
+					"default": Date.eod().subtract(Duration.newInstance("month"))
+				},
+				{"id": "sampleMax", "name": "End Date", "type": "date", "default": Date.today()}
+			],
+			[],
+			"unittest",
+			false
+		);
+	});
+
+
+
+	var FAILURES = new Template([
+		'<table class="table"><tr><th>Test Name</th><th>Fail Rate</th></tr>',
+		{
+			"from":".",
+			"template":"<tr><td>{{test}}</td><td>{{failrate|percent}}</td></tr>"
+		},
+		'</table>'
+	]);
+
+	function showDetails(id, details){
+		$("#"+id).html(FAILURES.expand(details));
+		dynamicLayout();
+	}//function
+
+
+});
+
+</script>
+
+
+</BODY>
+</HTML>
+

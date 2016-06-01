@@ -13,12 +13,20 @@ importScript("../modevlib/math/Stats.js");
 importScript("../modevlib/qb/qb.js");
 
 
-var search = function*(query){
-  var output = yield (Rest.post({
-    //url: "http://localhost:5000/query",
-    url: "https://activedata.allizom.org/query",
-    json: query
-  }));
+var query = function*(query){
+  var output ;
+  if (query.from=="failures"){
+    output = yield (Rest.post({
+      url: "http://localhost:5000/query",
+      json: query
+    }));
+  }else{
+    output = yield (Rest.post({
+      //url: "http://localhost:5000/query",
+      url: "https://activedata.allizom.org/query",
+      json: query
+    }));
+  }//endif
 
   yield (output);
 };

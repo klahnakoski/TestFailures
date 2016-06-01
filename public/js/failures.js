@@ -34,12 +34,12 @@ var _search;
   }};
 
   _search = function(testName, dateRange){
-    var partitions=null;
-    var a = Log.action("Find platforms.  This will take a while...", true);
 
-    var regexThread=Thread.run("regex", function*(){
-      var p = yield (search({
-        "from": "unittest",
+    Thread.run("search", function*(){
+      var a = Log.action("Find platforms.", true);
+      var partitions = yield (query({
+        "select": [{"value": "fails.sum", "aggregate": "sum"}],
+        "from": "failures",
         "groupby": [
           "run.suite",
           "run.type",
@@ -56,39 +56,15 @@ var _search;
           ]
         },
         "limit": 100,
+        "sort": {"value": "fails.sum", "sort": -1},
         "format": "list"
       }));
-      if (!partitions) partitions=p
-    });
+      Log.actionDone(a);
 
-    var termsThread=Thread.run("terms", function*(){
-      var p = yield (search({
-        "from": "unittest",
-        "groupby": [
-          "run.suite",
-          "run.type",
-          "result.test",
-          "build.platform",
-          "build.type"
-        ],
-        "where": {
-          "and": [
-            {"gte": {"build.date": dateRange.min.unix()}},
-            {"lt": {"build.date": dateRange.max.unix()}},
-            {"eq": {"result.test": testName}},
-            DEBUG ? debugFilter : true
-          ]
-        },
-        "limit": 100,
-        "format": "list"
-      }));
-      if (!partitions) partitions=p;
-    });
+      // JUST IN CASE ActiveData DID NOT SORT
+      partitions.data = qb.sort(partitions.data, {"value": "fails.sum", "sort": -1});
 
-    Thread.run("charting", function*(){
       try{
-        yield (Thread.joinAny([regexThread, termsThread]));
-
         var chartArea = $("#charts");
         if (partitions.data.length>MAX_TESTS_PER_PAGE) {
           chartArea.html(partitions.data.length + " is too many combinations");
@@ -128,7 +104,7 @@ var _search;
       var a = Log.action("find test results", true);
       try {
         //PULL FAILURE DETAILS
-        var result = yield (search({
+        var result = yield (query({
           "from": "unittest",
           "select": [
             "_id",

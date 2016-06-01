@@ -35,7 +35,7 @@ var _perf_search;
         //WHAT DIMENSION ARE WE SHOWING?
         var a = Log.action("Find platforms.  This will take a while...", true);
         try {
-          var partitions = yield (search({
+          var partitions = yield (query({
             "from": "perf",
             "groupby": [
               "run.suite",
@@ -71,7 +71,7 @@ var _perf_search;
         //WHAT DIMENSION ARE WE SHOWING?
         var a = Log.action("Find platforms.  This will take a while...", true);
         try {
-          var partitions = yield (search({
+          var partitions = yield (query({
             "from": "perf",
             "groupby": [
               "run.suite",
@@ -136,7 +136,7 @@ var _perf_search;
       var a = Log.action("find test results", true);
       try {
         //PULL FAILURE DETAILS
-        var result = yield (search({
+        var result = yield (query({
           "from": "perf",
           "select": [
             "_id",
