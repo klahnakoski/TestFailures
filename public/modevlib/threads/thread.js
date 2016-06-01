@@ -308,12 +308,13 @@ build = function(){
 		var children = this.children.slice(); //copy
 		var exitEarly = false;
 		var self = this;
-		if (DEBUG){
+		if (DEBUG) {
 			if (children.length > 0) {
 				Log.note("Join the child threads of " + this.name);
-			}else{
+			} else {
 				Log.note("Join the child threads of " + this.name);
 			}//endif
+		}//endif
 
 		for (var c = 0; c < children.length; c++) {
 			var childThread = children[c];
@@ -554,4 +555,3 @@ if (!window.Log) {
 
 
 build();
-
