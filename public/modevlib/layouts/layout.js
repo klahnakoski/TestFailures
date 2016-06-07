@@ -233,9 +233,15 @@ var dynamicLayout;   //SUBSEQUENT LAYOUT WHEN DOM CHANGES
 
 					if (points[0].l == 0) {
 						layoutFunction += '$("#' + lhsID + '").offset({"' + mapper.left + '": ' + leftMost + '});\n';
+						if (DEBUG){
+							layoutFunction += 'Log.note("set '+lhsID+'.offset.' + mapper.left + '="+('+leftMost+'));\n';
+						}//endif
 					} else {
 						selfWidth = '$("#' + lhsID + '").' + mapper.outerWidth + '()';
 						layoutFunction += '$("#' + lhsID + '").offset({"' + mapper.left + '": ' + leftMost + '-' + selfWidth + '*' + points[0].l + '});\n';
+						if (DEBUG){
+							layoutFunction += 'Log.note("set '+lhsID+'.offset.' + mapper.left + '="+('+leftMost + '-' + selfWidth + '*' + points[0].l+'));\n';
+						}//endif
 					}//endif
 				}//endif
 
@@ -248,9 +254,10 @@ var dynamicLayout;   //SUBSEQUENT LAYOUT WHEN DOM CHANGES
 		}//endif
 
 		eval("dynamicLayout=" + layoutFunction);
-		dynamicLayout();
 		dynamicLayout = debounce(dynamicLayout, DELAY_JAVASCRIPT);
+		dynamicLayout();
 		window.onresize = dynamicLayout;
+
 	}//function
 
 

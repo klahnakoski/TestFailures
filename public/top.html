@@ -11,13 +11,7 @@
 <div id="sidebar" layout="tl=window.tl;bottom=footer.bottom;" style="width:0;overflow:hidden;">
 	<div class="padding">
 		<div id="description">
-			This dashboard charts test durations by push date.
-			The text box can be used for searching by test name.
-			<ul>
-				<li>Blue - Successful</li>
-				<li>Orange - Test Failure</li>
-				<li>Red - Timeout (duration = -1 second)</li>
-			</ul>
+			This dashboard lists high-failing and recent failing tests
 		</div>
 		<hr>
 		<div id="filters" style="width:300px;" class="menu">
@@ -29,32 +23,20 @@
 <div id="sidebar_name" class="sidebar_name" layout="top=window.top;bottom=footer.top;left=sidebar.right;">
 	<div>Configuration</div>
 </div>
-<div id="content" style="padding: 10px 10px 50px 10px;" layout="tr=page.tr;left=sidebar_name.right;">
-	<div id="status" style="height:30px">
-		Page Loading...
-		<span class="loading"><img src="images/spinner.gif" alt=""></span>
+<div id="content" style="padding: 10px 10px 50px 10px;" layout="tr=window.tr;left=sidebar_name.right;bottom=footer.top;">
+	<h1 style="width:100%;text-align:center;">Test Failures</h1>
+	<div id="listarea" layout="top=content.top;bottom=footer.top;left=sidebar_name.right;right=window.right;">
+		<div id="lhs" layout="tl=listarea.tl;br=listarea.bc" style="padding-top: 50px">
+			<h2 id="lhs_title" style="width:100%;text-align:center;">High Failing Tests</h2>
+			<div id="bad" style="overflow-y: scroll;width:100%;padding-bottom:30px;" layout="bottom=lhs.bottom;top=lhs_title.bottom;"></div>
+		</div>
+		<div id="rhs"  layout="tl=listarea.tc;br=listarea.br" style="padding-top: 50px">
+			<h2 id="rhs_title" style="width:100%;text-align:center;">Recent Failing Tests</h2>
+			<div id="recent" style="overflow-y: scroll;width:100%;padding-bottom:30px;" layout="bottom=rhs.bottom;top=rhs_title.bottom;">
+
+			</div>
+		</div>
 	</div>
-	<table>
-		<tr>
-			<td><div id="chart"></div></td>
-		</tr>
-		<tr>
-			<td>
-				<h2>High Failing Tests</h2>
-				<div id="bad">
-
-				</div>
-
-			</td>
-			<td>
-				<h2>Recent Failing Tests</h2>
-				<div id="recent">
-
-				</div>
-			</td>
-		</tr>
-	</table>
-
 </div>
 <div id="footer" style="height:50px;text-align: center;padding: 5px 0 5px 0;background-color: #fff;z-index: 12;" layout="bl=window.bl;br=window.br;">
 	Github Issues <a href="https://github.com/klahnakoski/TestFailures/issues/new">https://github.com/klahnakoski/TestFailures/issues/new</a><br>
@@ -84,20 +66,22 @@ importScript(['js/util.js', 'js/failures.js', 'modevlib/gui/GUI.js', 'css/menu.c
 			var failures = yield (query({
 				"from": "failures",
 				"select": [
-					"test",
-					{"name": "fail_rate", "value": "fails.avg"},
-					{"name": "count", "value":"fails.count"}
+					{"name": "fail_rate", "value": "fails.avg", "aggregate": "max"},
+					{"name": "count", "value": "fails.count", "aggregate": "max"},
+					{"value": "fails.sum", "aggregate": "max"}
 				],
+				"edges": ["test"],
 				"where": {"and":[
 					{"gte": {"timestamp": Date.today().subtract(Duration.DAY).unix()}},
 					{"gt": {"fails.count": 2}},
 					{"eq": {"build.product": "firefox"}}
 				]},
-				"sort": {"value": "fails.sum", "sort": -1},
-				"limit": 10,
+				"sort": {"value": "fail_rate", "sort": -1},
+				"limit": 30,
 				"format": "list"
 			}));
 
+			failures.data = qb.sort(failures.data, {"value": "fail_rate", "sort": -1});
 			showDetails("bad", failures.data);
 		});
 
@@ -106,21 +90,23 @@ importScript(['js/util.js', 'js/failures.js', 'modevlib/gui/GUI.js', 'css/menu.c
 			var recent = yield (query({
 				"from": "failures",
 				"select": [
-					"test",
-					{"name": "fail_rate", "value": "fails.avg"},
-					{"name": "count", "value":"fails.sum"}
+					{"name": "fail_rate", "value": "fails.avg", "aggregate":"max"},
+					{"name": "count", "value":"fails.sum", "aggregate":"max"},
+					{"value":"slope", "aggregate":"max"}
 				],
+				"edges":["test"],
 				"where": {"and":[
 					{"gte": {"timestamp": Date.today().subtract(Duration.WEEK).unix()}},
 					{"gt": {"fails.count": 2}},
 					{"eq": {"build.product": "firefox"}},
-//					{"gt": {"slope": 0}}
+					{"gt": {"slope": 0}}
 				]},
 				"sort": {"value": "slope", "sort": -1},
-				"limit": 10,
+				"limit": 30,
 				"format": "list"
 			}));
 
+			recent.data = qb.sort(recent.data, {"value": "count", "sort": -1});
 			showDetails("recent", recent.data);
 		})
 
@@ -149,13 +135,13 @@ importScript(['js/util.js', 'js/failures.js', 'modevlib/gui/GUI.js', 'css/menu.c
 
 
 	var FAILURES = new Template([
-		'<table class="table"><tr><th>Test Name</th><th>Fail Rate</th><th>Count</th></tr>',
+		'<table class="table" style="width:100%"><tr><th>Test Name</th><th>Fail Rate</th><th>Count</th></tr>',
 		{
 			"from":".",
 			"template":'<tr class="hoverable">' +
-			'<td><a href="{{url}}">{{test}}</a></td>' +
-			'<td>{{fail_rate|percent}}</td>' +
-			'<td>{{count}}</td>' +
+			'<td><a href="" link="{{url}}">{{test}}</a></td>' +
+			'<td style="text-align: right;">{{fail_rate|percent}}</td>' +
+			'<td style="text-align: right;">{{count}}</td>' +
 			'</tr>'
 		},
 		'</table>'
@@ -167,14 +153,12 @@ importScript(['js/util.js', 'js/failures.js', 'modevlib/gui/GUI.js', 'css/menu.c
 		});
 
 		$("#"+id).html(FAILURES.expand(details));
-		$("#"+id+" tr").onclick(function(e){
-			var link = $(this).find("a").attr("href").first();
+		$("#"+id+" tr").click(function(){
+			var link = $(this).find("a").first().attr("link");
 			window.open(link);
 		});
 		dynamicLayout();
 	}//function
-
-
 
 });
 

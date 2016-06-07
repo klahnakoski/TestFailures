@@ -50,23 +50,22 @@
 
 <script type="application/javascript">
 importScript(['js/util.js', 'js/failures.js'], function(){
-	var RECENT_DATE = Date.today().subtract(Duration.WEEK);
-	var TO_DATE = Date.now().floor(Duration.DAY);
-
-	var dateRange = {
-		"min": RECENT_DATE,
-		"max": TO_DATE
-	};
-
 	layoutAll();
 	sidebarSlider();
 
 	$("#charts").html("");
 
 	function search(){
+		var RECENT_DATE = GUI.state.sampleMin;
+		var TO_DATE = GUI.state.sampleMax;
+		var testName = GUI.state.search;
+
+		var dateRange = {
+			"min": RECENT_DATE,
+			"max": TO_DATE
+		};
+		
 		$("#charts").html("");
-		var testName = $("#search").val().trim();
-		Session.URL.set("test", testName);
 
 		_search(testName, dateRange);
 		return false;
@@ -94,6 +93,29 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 	};//function
 
 	Log.actionDone();
+
+
+	$(document).ready(function(){
+		GUI.setup(
+			createChart,
+			[
+				{
+					"id": "sampleMin",
+					"name": "Start Date",
+					"type": "date",
+					"default": Date.eod().subtract(Duration.newInstance("month"))
+				},
+				{"id": "sampleMax", "name": "End Date", "type": "date", "default": Date.today()},
+				{"id": "search", "name":"Test Name", "type":"string", "default":""}
+			],
+			[],
+			"unittest",
+			false
+		);
+	});
+
+
+
 
 });
 
