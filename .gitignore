@@ -1,0 +1,29 @@
+*.log
+*.log.*
+*.pyc
+*.tab
+out
+pyLibrary/.svn
+.idea
+*.iml
+*.txt
+/pyLibrary/.svn
+/results
+/docs/Pulse Icon.png
+/docs/gmail.png
+/resources/sample_queries/average_chunk_times.xlsx
+/.env
+/docs/icon.xcf
+/docs/Qb.xcf
+/docs/Example Data.xlsx
+/docs/Paper on Multidimensional Data Models.pdf
+/docs/cube.png
+/docs/*.png
+/docs/ElasticSearch.docx
+/docs/*.xlsx
+/active_data/public/images/Sharethis.svg
+/docs/*.pptx
+/active_data/public/modevlib/.svn
+/active_data/public/modevlib/ESQueryRunner.js
+/pyLibrary1
+/docs/ActiveData Notes.rtf

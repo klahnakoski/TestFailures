@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 import sys
 
+from pyLibrary import convert
 from pyLibrary.debugs import constants
 from pyLibrary.debugs import startup
 from pyLibrary.debugs.logs import Log
@@ -27,12 +28,16 @@ SUITES = ["mochitest", "web-platform-tests", "reftest", "xpcshell", ]
 EXCLUDE_PLATFORMS = []
 EXCLUDE_BRANCHES = ["try"]
 
+DEBUG_TEST = None  # "toolkit/components/sqlite/tests/xpcshell/test_sqlite_internal.js"
+
 config = None
 
-def agg(today, destination, please_stop):
+
+def agg(today, destination, debug_filter=None, please_stop=None):
     """
     :param today:  The day we are performing the calculation for
     :param destination: The ES index where we put the results
+    :param debug_filter: Some extra limitation to go faster, and focus, for testing
     :param please_stop: Signal for stopping early
     :return: nothing
     """
@@ -44,9 +49,12 @@ def agg(today, destination, please_stop):
             {"gt": {"build.date": (today - 3 * DAY).unix}},
             {"lt": {"build.date": (today + 4 * DAY).unix}},
             {"not": {"in": {"build.platform": EXCLUDE_PLATFORMS}}},
-            {"not": {"in": {"build.branch": EXCLUDE_BRANCHES}}},
-            {"eq": {"result.ok": False}}
+            {"not": {"in": {"build.branch": EXCLUDE_BRANCHES}}}
         ]}
+        if debug_filter:
+            domain['and'].append(debug_filter)
+
+        _ = convert.value2json("\"\"")
 
         # WE CAN NOT PULL ALL TESTS, THERE ARE TOO MANY, SO DO ONE SUITE AT A TIME
         Log.note("Get summary of failures in {{suite}} for date {{date}}", suite=suite, date=today)
@@ -55,7 +63,10 @@ def agg(today, destination, please_stop):
             "groupby": [
                 {"name": "test", "value": "result.test"}
             ],
-            "where": domain,
+            "where": {"and": [
+                domain,
+                {"eq": {"result.ok": False}}
+            ]},
             "format": "list",
             "limit": 100000
         })
@@ -74,6 +85,7 @@ def agg(today, destination, please_stop):
                     "run.suite",
                     {"name": "test", "value": "result.test"},
                     "build.platform",
+                    "build.product",
                     "build.type",
                     "run.type"
                 ],
@@ -88,8 +100,16 @@ def agg(today, destination, please_stop):
                         },
                         "aggregate": "stats"
                     },
-                    {"name": "date", "value": {"div": {"build.date": DAY.seconds}}, "aggregate": "stats"},
-                    {"name": "fails", "value": {"when": "result.ok", "then": 0, "else": 1}, "aggregate": "stats"}
+                    {
+                        "name": "date",
+                        "value": {"div": [{"sub": {"build.date": today + 0.5 * DAY}}, DAY.seconds]},
+                        "aggregate": "stats"
+                    },
+                    {
+                        "name": "fails",
+                        "value": {"when": "result.ok", "then": 0, "else": 1},
+                        "aggregate": "stats"
+                    }
                 ],
                 "where": {"and": [
                     domain,
@@ -102,7 +122,15 @@ def agg(today, destination, please_stop):
             # FOR EACH TEST, CALCULATE THE "RECENTLY BAD" STATISTIC (linear regression slope)
             # THIS IS ONLY A ROUGH CALC FOR TESTING THE UI
             for t in tests_summary.data:
-                t._id = "-".join([t.build.platform, coalesce(t.build.type, ""), coalesce(t.run.type, ""), t.run.suite, t.test, unicode(today.unix)])
+                t._id = "-".join([
+                    coalesce(t.build.product, ""),
+                    t.build.platform,
+                    coalesce(t.build.type, ""),
+                    coalesce(t.run.type, ""),
+                    t.run.suite,
+                    t.test,
+                    unicode(today.unix)
+                ])
                 t.timestamp = today
                 t.average = t.fails.avg
                 if t.date.var == 0:
@@ -125,7 +153,6 @@ def loop_all_days(destination, please_stop):
     # ALL BUILD DATES THAT HAVE NOT BEEN PROCESSED YET
     build_dates = http.post_json(config.source.url, json={
         "from": "unit",
-
         "edges": [
             {
                 "name": "date",
@@ -145,10 +172,12 @@ def loop_all_days(destination, please_stop):
         "format": "list"
     })
 
+    build_dates.data = jx.sort(build_dates.data, {"value": "date", "sort": -1})
+
     for d in build_dates.data:
         if please_stop:
             return
-        agg(Date(d.date), destination, please_stop)
+        agg(Date(d.date), destination, please_stop=please_stop)
     please_stop.go()
 
 

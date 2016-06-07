@@ -34,14 +34,27 @@
 		Page Loading...
 		<span class="loading"><img src="images/spinner.gif" alt=""></span>
 	</div>
+	<table>
+		<tr>
+			<td><div id="chart"></div></td>
+		</tr>
+		<tr>
+			<td>
+				<h2>High Failing Tests</h2>
+				<div id="bad">
 
-	<div id="bad">
+				</div>
 
-	</div>
+			</td>
+			<td>
+				<h2>Recent Failing Tests</h2>
+				<div id="recent">
 
-	<div id="recent">
+				</div>
+			</td>
+		</tr>
+	</table>
 
-	</div>
 </div>
 <div id="footer" style="height:50px;text-align: center;padding: 5px 0 5px 0;background-color: #fff;z-index: 12;" layout="bl=window.bl;br=window.br;">
 	Github Issues <a href="https://github.com/klahnakoski/TestFailures/issues/new">https://github.com/klahnakoski/TestFailures/issues/new</a><br>
@@ -72,10 +85,15 @@ importScript(['js/util.js', 'js/failures.js', 'modevlib/gui/GUI.js', 'css/menu.c
 				"from": "failures",
 				"select": [
 					"test",
-					{"name": "fail_rate", "value": "fails.avg"}
+					{"name": "fail_rate", "value": "fails.avg"},
+					{"name": "count", "value":"fails.count"}
 				],
-				"where": {"eq": {"timestamp": Date.today().unix()}},
-				"sort": {"value": "fails.avg", "sort": -1},
+				"where": {"and":[
+					{"gte": {"timestamp": Date.today().subtract(Duration.DAY).unix()}},
+					{"gt": {"fails.count": 2}},
+					{"eq": {"build.product": "firefox"}}
+				]},
+				"sort": {"value": "fails.sum", "sort": -1},
 				"limit": 10,
 				"format": "list"
 			}));
@@ -83,20 +101,28 @@ importScript(['js/util.js', 'js/failures.js', 'modevlib/gui/GUI.js', 'css/menu.c
 			showDetails("bad", failures.data);
 		});
 
-//		// TOP 10 RECENT BAD
-//		Thread.run("get recent", function*(){
-//			var recent = yield (query({
-//				"from": "failures",
-//				"select": [
-//					"test"
-//				],
-//				"where": {"gte": {"timestamp": Date.today().subtract(Duration.WEEK).unix()}},
-//				"sort": {"value": "slope", "sort": -1},
-//				"limit": 100
-//			}));
-//
-//			showDetails("recent", recent.data);
-//		})
+		// TOP 10 RECENT BAD
+		Thread.run("get recent", function*(){
+			var recent = yield (query({
+				"from": "failures",
+				"select": [
+					"test",
+					{"name": "fail_rate", "value": "fails.avg"},
+					{"name": "count", "value":"fails.sum"}
+				],
+				"where": {"and":[
+					{"gte": {"timestamp": Date.today().subtract(Duration.WEEK).unix()}},
+					{"gt": {"fails.count": 2}},
+					{"eq": {"build.product": "firefox"}},
+//					{"gt": {"slope": 0}}
+				]},
+				"sort": {"value": "slope", "sort": -1},
+				"limit": 10,
+				"format": "list"
+			}));
+
+			showDetails("recent", recent.data);
+		})
 
 
 	};
@@ -123,18 +149,31 @@ importScript(['js/util.js', 'js/failures.js', 'modevlib/gui/GUI.js', 'css/menu.c
 
 
 	var FAILURES = new Template([
-		'<table class="table"><tr><th>Test Name</th><th>Fail Rate</th></tr>',
+		'<table class="table"><tr><th>Test Name</th><th>Fail Rate</th><th>Count</th></tr>',
 		{
 			"from":".",
-			"template":"<tr><td>{{test}}</td><td>{{failrate|percent}}</td></tr>"
+			"template":'<tr class="hoverable">' +
+			'<td><a href="{{url}}">{{test}}</a></td>' +
+			'<td>{{fail_rate|percent}}</td>' +
+			'<td>{{count}}</td>' +
+			'</tr>'
 		},
 		'</table>'
 	]);
 
 	function showDetails(id, details){
+		details.forall(function(d){
+			d.url = "test.html#"+ convert.Object2URLParam({"test": d.test});
+		});
+
 		$("#"+id).html(FAILURES.expand(details));
+		$("#"+id+" tr").onclick(function(e){
+			var link = $(this).find("a").attr("href").first();
+			window.open(link);
+		});
 		dynamicLayout();
 	}//function
+
 
 
 });

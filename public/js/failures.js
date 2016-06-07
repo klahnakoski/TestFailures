@@ -13,7 +13,7 @@ var _search;
   var MAX_TESTS_PER_PAGE = 100;
   var CHART_TEMPLATE = new Template(
     '<div style="padding-top:10px;">' +
-    '<h3>{{platform}} {{suite}}</h3>' +
+    '<h3>{{product|upper}} - {{platform}} {{suite}} ({{fail_rate|percent}} failures)</h3>' +
     '{{test}}'+
     '<div id="chart{{num}}" class="chart" style="height:300px;width:800px;"></div>' +
     '</div>');
@@ -27,31 +27,36 @@ var _search;
     '<b>Chunk:</b> {{chunk}}'
   );
 
-  var debugFilter = {"eq": {
-    "build.platform": "linux",
-    "build.type": "pgo",
-    "run.suite": "mochitest-other"
-  }};
+  var debugFilter = true;
+  //var debugFilter = {"eq": {
+  //  "build.platform": "linux",
+  //  "build.type": "pgo",
+  //  "run.suite": "mochitest-other"
+  //}};
 
   _search = function(testName, dateRange){
 
     Thread.run("search", function*(){
       var a = Log.action("Find platforms.", true);
       var partitions = yield (query({
-        "select": [{"value": "fails.sum", "aggregate": "sum"}],
+        "select": [
+          {"value": "fails.sum", "aggregate": "sum"},
+          {"value": "fails.count", "aggregate":"sum"}
+        ],
         "from": "failures",
         "groupby": [
+          "build.product",
           "run.suite",
           "run.type",
-          "result.test",
+          "test",
           "build.platform",
           "build.type"
         ],
         "where": {
           "and": [
-            {"gte": {"build.date": dateRange.min.unix()}},
-            {"lt": {"build.date": dateRange.max.unix()}},
-            {"regex": {"result.test": ".*" + convert.String2RegExp(testName) + ".*"}},
+            {"gte": {"timestamp": dateRange.min.unix()}},
+            {"lt": {"timestamp": dateRange.max.unix()}},
+            {"regex": {"test": ".*" + convert.String2RegExp(testName) + ".*"}},
             DEBUG ? debugFilter : true
           ]
         },
@@ -61,8 +66,12 @@ var _search;
       }));
       Log.actionDone(a);
 
+      partitions.data.forall(function(d){
+        d.fails.avg = d.fails.sum / d.fails.count;
+      });
+
       // JUST IN CASE ActiveData DID NOT SORT
-      partitions.data = qb.sort(partitions.data, {"value": "fails.sum", "sort": -1});
+      partitions.data = qb.sort(partitions.data, {"value": "fails.avg", "sort": -1});
 
       try{
         var chartArea = $("#charts");
@@ -77,11 +86,21 @@ var _search;
         chartArea.html("");
         partitions.data.forall(function(combo, i){
           if (DEBUG && i>0) return;
+          var product = combo.build.product;
           var platform = combo.build.platform + (combo.build.type ? (" (" + combo.build.type + ")") : "");
           var suite = combo.run.suite + (combo.run.type ? (" (" + combo.run.type + ")") : "");
-          var test = combo.result.test;
-          chartArea.append(CHART_TEMPLATE.expand({"num": i, "platform": platform, "suite": suite, "test": test}));
+          var test = combo.test;
+          var fail_rate = combo.fails.avg;
+          chartArea.append(CHART_TEMPLATE.expand({
+            "num": i,
+            "product":product,
+            "platform": platform,
+            "suite": suite,
+            "test": test,
+            "fail_rate": fail_rate
+          }));
           combo.count = undefined;
+          combo.fails = undefined;
           //PULL DATA AND SHOW CHART
           (function(i){
               showOne("chart" + i, Map.zip(Map.leafItems(combo)), dateRange);
@@ -111,7 +130,7 @@ var _search;
             {"name": "suite", "value": "run.suite"},
             {"name": "chunk", "value": "run.chunk"},
             {"name": "duration", "value": {"coalesce":["result.duration", -1]}},
-            {"name": "test", "value": "result.test"},
+            {"name": "test", "value": "test"},
             {"name": "platform", "value": "build.platform"},
             {"name": "build_type", "value": "build.type"},
             {"name": "build_date", "value": "build.date"},

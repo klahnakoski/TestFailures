@@ -28,11 +28,6 @@ String.trim = function(v){
 	return v.trim();
 };
 
-String.percent = function(value, places){
-	var output = aMath.round({"digits":places});
-	return output+"%";
-};
-
 if (String.prototype.includes) {
 	String.prototype.contains = String.prototype.includes;
 } else if (!String.prototype.contains) {

@@ -1,0 +1,48 @@
+{
+	"source":{
+		//"url":"http://localhost:5000/query"
+		"url":"http://activedata.allizom.org/query"
+	},
+	"destination": {
+		"host": "http://localhost",
+		"port": 9200,
+		"index": "test_failures",
+		"type": "test_failures",
+		"timeout": 300,
+		"schema": {
+			"$ref": "//../schema/test_failures.json"
+		},
+		"debug": false,
+		"limit_replicas": false
+	},
+	"constants": {
+		"pyLibrary.env.http.default_headers": {
+			"referer": ""
+		}
+	},
+	"debug": {
+		"trace": true,
+		"cprofile": {
+			"enabled": false,
+			"filename": "./results/profile.tab"
+		},
+		"log": [
+			{
+				"log_type": "console"
+			},
+			{
+				"log_type": "elasticsearch",
+				"host": "http://localhost",
+				"index": "debug",
+				"type": "test_failure"
+			},
+			{
+				"log_type": "ses",
+				"$ref": "file://~/private.json#aws_credentials",
+				"from_address": "klahnakoski@mozilla.com",
+				"to_address": "klahnakoski@mozilla.com",
+				"subject": "[ALERT][DEV] Problem in Test Failure Summary"
+			}
+		]
+	}
+}

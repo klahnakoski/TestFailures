@@ -50,6 +50,7 @@ var Template = function Template(template){
 	FUNC.style = convert.Object2style;
 	FUNC.css = convert.Object2CSS;
 	FUNC.attribute = convert.value2HTMLAttribute;
+	FUNC.url = convert.Object2URLParam;
 	FUNC.datetime = function(d, f){
 		f = coalesce(f, "yyyy-MM-dd HH:mm:ss");
 		return Date.newInstance(d).format(f);
@@ -84,6 +85,11 @@ var Template = function Template(template){
 	FUNC.round = function(value, digits){
 		return aMath.round(value, {"digits": digits});
 	};
+	FUNC.percent = function(value, digits){
+		var output = aMath.round(value*100, {"digits":digits});
+		return output+"%";
+	};
+
 	FUNC.metric = aMath.roundMetric;
 	FUNC.upper = function(value){
 		if (isString(value)) {
@@ -92,6 +98,7 @@ var Template = function Template(template){
 			return convert.value2json();
 		}
 	};
+
 
 	function _expand(template, namespaces){
 		if (template instanceof Array) {
@@ -122,18 +129,18 @@ var Template = function Template(template){
 		}//endif
 
 		return Map.get(namespaces[0], loop.from).map(function(m){
-			var map = Map.copy(namespaces[0]);
-			map["."] = m;
+			var namespace = Map.copy(namespaces[0]);
+			namespace["."] = m;
 			if (m instanceof Object && !(m instanceof Array)) {
 				Map.forall(m, function(k, v){
-					map[k.toLowerCase()] = v;
+					namespace[k.toLowerCase()] = v;
 				});
 			}//endif
 			namespaces.forall(function(n, i){
-				map[Array(i + 3).join(".")] = n;
+				namespace[Array(i + 3).join(".")] = n;
 			});
 
-			return _expand(loop.template, namespaces.copy().prepend(map));
+			return _expand(loop.template, namespaces.copy().prepend(namespace));
 		}).join(loop.separator === undefined ? "" : loop.separator);
 	}
 

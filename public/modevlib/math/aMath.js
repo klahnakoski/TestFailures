@@ -48,16 +48,18 @@ aMath = {};
 	};
 
 	aMath.round = function(value, rounding){
-		if (rounding === undefined) return Math.round(value);
+		if (rounding == null) return Math.round(value);
 		var d;
 		if (value===undefined || value==null){
 			return null;
 		 } else if (value==0) {
 			return 0.0;
-		} else if (rounding.digits !== undefined) {
+		} else if (rounding.digits != null) {
 			d = Math.pow(10, rounding.digits - aMath.ceiling(aMath.log10(value)));
-		} else {
+		} else if (aMath.isNumeric(rounding)) {
 			d = Math.pow(10, rounding);
+		}else{
+			return Math.round(value);
 		}//endif
 		return Math.round(value * d) / d;
 	};//method

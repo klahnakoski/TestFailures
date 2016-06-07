@@ -1,0 +1,34 @@
+{
+	"source": {
+		"url": "http://activedata.allizom.org/query"
+	},
+	"destination": {
+		"host": "http://localhost",
+		"port": 9200,
+		"index": "test_failures",
+		"type": "test_failures",
+		"timeout": 300,
+		"schema": {
+			"$ref": "../../../resources/schema/test_failures.json"
+		},
+		"debug": false,
+		"limit_replicas": false
+	},
+	"constants": {
+		"pyLibrary.env.http.default_headers": {
+			"referer": "https://github.com/klahnakoski/testfailures"
+		}
+	},
+	"debug": {
+		"trace": true,
+		"cprofile": {
+			"enabled": false,
+			"filename": "./results/profile.tab"
+		},
+		"log": [
+			{
+				"log_type": "console"
+			}
+		]
+	}
+}
