@@ -149,7 +149,7 @@ importScript(['js/util.js', 'js/failures.js', 'modevlib/gui/GUI.js', 'css/menu.c
 
 	function showDetails(id, details){
 		details.forall(function(d){
-			d.url = "test.html#"+ convert.Object2URLParam({"test": d.test});
+			d.url = "test.html#"+ convert.Object2URLParam({"search": d.test});
 		});
 
 		$("#"+id).html(FAILURES.expand(details));

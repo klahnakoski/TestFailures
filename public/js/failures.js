@@ -37,7 +37,8 @@ var _search;
   _search = function(testName, dateRange){
 
     Thread.run("search", function*(){
-      var a = Log.action("Find platforms.", true);
+
+      var a = Log.action("Find platforms...", true);
       var partitions = yield (query({
         "select": [
           {"value": "fails.sum", "aggregate": "sum"},
@@ -120,7 +121,11 @@ var _search;
   function showOne(target, group, dateRange){
     Thread.run(function*(){
 
-      var a = Log.action("find test results", true);
+      var sillyName = Map.map(group, function(k, v){
+        if (k == "test") return undefined;
+        return v;
+      }).join("::");
+      var a = Log.action("find " + sillyName, true);
       try {
         //PULL FAILURE DETAILS
         var result = yield (query({
@@ -213,7 +218,8 @@ var _search;
               "range": dateRange
             },
             "y":{
-              "value": "duration"
+              "value": "duration",
+              "range":{"max":aChart.maxNice(result.data.select("duration"))}
             },
             "color":{
               "domain": {

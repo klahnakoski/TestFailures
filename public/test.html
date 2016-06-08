@@ -22,7 +22,7 @@
 		<hr>
 		<div id="filters" style="width:300px;" class="menu">
 		</div>
-		<div id="parameters" style="display:none;">
+		<div id="parameters">
 		</div>
 	</div>
 </div>
@@ -36,8 +36,10 @@
 		</form>
 	</div>
 
-	<div id="status" style="height:30px">
-		Page Loading...
+	<div>
+		<div id="status" style="height:30px;display: inline-block;">
+			Page Loading...
+		</div>
 		<span class="loading"><img src="images/spinner.gif" alt=""></span>
 	</div>
 
@@ -49,39 +51,7 @@
 </div>
 
 <script type="application/javascript">
-importScript(['js/util.js', 'js/failures.js'], function(){
-	layoutAll();
-	sidebarSlider();
-
-	$("#charts").html("");
-
-	function search(){
-		var RECENT_DATE = GUI.state.sampleMin;
-		var TO_DATE = GUI.state.sampleMax;
-		var testName = GUI.state.search;
-
-		var dateRange = {
-			"min": RECENT_DATE,
-			"max": TO_DATE
-		};
-		
-		$("#charts").html("");
-
-		_search(testName, dateRange);
-		return false;
-	}//function
-
-	$("#search_form").submit(search);
-
-	var search_box=$("#search");
-
-	var params = Session.URL.getFragment();
-	if (params.test){
-		search_box.val(params.test);
-		_search(params.test, dateRange);
-	}//endif
-	search_box.focus();
-
+importScript(['js/util.js', 'js/failures.js', 'modevlib/gui/GUI.js'], function(){
 	Thread.showWorking = function(numThread){
 		var l = $(".loading");
 		l.show();
@@ -92,12 +62,34 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 		l.hide();
 	};//function
 
-	Log.actionDone();
+	layoutAll();
+	sidebarSlider();
+
+	$("#charts").html("");
+
+	function search(){
+		$("#charts").html("");
+
+		var minDate = Date.newInstance(GUI.state.sampleMin);
+		var maxDate = Date.newInstance(GUI.state.sampleMax);
+		var testName = GUI.state.search;
+
+		_search(
+			testName,
+			{
+				"min": minDate,
+				"max": maxDate
+			}
+		);
+		return false;
+	}//function
 
 
 	$(document).ready(function(){
+		$("#search").focus();
+
 		GUI.setup(
-			createChart,
+			search,
 			[
 				{
 					"id": "sampleMin",
@@ -106,15 +98,13 @@ importScript(['js/util.js', 'js/failures.js'], function(){
 					"default": Date.eod().subtract(Duration.newInstance("month"))
 				},
 				{"id": "sampleMax", "name": "End Date", "type": "date", "default": Date.today()},
-				{"id": "search", "name":"Test Name", "type":"string", "default":""}
+				{"id": "search", "name": "Test Name", "type": "string", "default": ""}
 			],
 			[],
 			"unittest",
 			false
 		);
 	});
-
-
 
 
 });
