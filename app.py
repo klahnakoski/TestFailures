@@ -146,39 +146,41 @@ def agg(today, destination, debug_filter=None, please_stop=None):
 
 
 def loop_all_days(destination, please_stop):
-    today = Date.today()
+    try:
+        today = Date.today()
 
-    # WHICH DAYS DO WE NEED TO CALCULATE
-    # ALL BUILD DATES WITH WITH ETL TIMESTAMP OF A WEEK AGO
-    # ALL BUILD DATES THAT HAVE NOT BEEN PROCESSED YET
-    build_dates = http.post_json(config.source.url, json={
-        "from": "unit",
-        "edges": [
-            {
-                "name": "date",
-                "value": "build.date",
-                "allowNulls": False,
-                "domain": {
-                    "type": "time",
-                    "min": "today-week",
-                    "max": "eod",
-                    "interval": "day"
+        # WHICH DAYS DO WE NEED TO CALCULATE
+        # ALL BUILD DATES WITH WITH ETL TIMESTAMP OF A WEEK AGO
+        # ALL BUILD DATES THAT HAVE NOT BEEN PROCESSED YET
+        build_dates = http.post_json(config.source.url, json={
+            "from": "unit",
+            "edges": [
+                {
+                    "name": "date",
+                    "value": "build.date",
+                    "allowNulls": False,
+                    "domain": {
+                        "type": "time",
+                        "min": "today-week",
+                        "max": "eod",
+                        "interval": "day"
+                    }
                 }
-            }
-        ],
-        "where": {"gte": {"etl.timestamp": (today - WEEK).unix}},
-        "sort": {"value": "build.date", "sort": -1},
-        "limit": 14,
-        "format": "list"
-    })
+            ],
+            "where": {"gte": {"etl.timestamp": (today - WEEK).unix}},
+            "sort": {"value": "build.date", "sort": -1},
+            "limit": 14,
+            "format": "list"
+        })
 
-    build_dates.data = jx.sort(build_dates.data, {"value": "date", "sort": -1})
+        build_dates.data = jx.sort(build_dates.data, {"value": "date", "sort": -1})
 
-    for d in build_dates.data:
-        if please_stop:
-            return
-        agg(Date(d.date), destination, please_stop=please_stop)
-    please_stop.go()
+        for d in build_dates.data:
+            if please_stop:
+                return
+            agg(Date(d.date), destination, please_stop=please_stop)
+    finally:
+        please_stop.go()
 
 
 def main():

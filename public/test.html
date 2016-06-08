@@ -95,7 +95,7 @@ importScript(['js/util.js', 'js/failures.js', 'modevlib/gui/GUI.js'], function()
 					"id": "sampleMin",
 					"name": "Start Date",
 					"type": "date",
-					"default": Date.eod().subtract(Duration.newInstance("month"))
+					"default": Date.eod().subtract(Duration.WEEK.multiply(2))
 				},
 				{"id": "sampleMax", "name": "End Date", "type": "date", "default": Date.today()},
 				{"id": "search", "name": "Test Name", "type": "string", "default": ""}

@@ -14,20 +14,12 @@ importScript("../modevlib/qb/qb.js");
 
 
 var query = function*(query){
-  var output ;
-  if (query.from=="failures"){
-    output = yield (Rest.post({
-      url: "http://localhost:5000/query",
-      json: query
-    }));
-  }else{
-    output = yield (Rest.post({
-      //url: "http://localhost:5000/query",
-      url: "https://activedata.allizom.org/query",
-      json: query
-    }));
-  }//endif
-
+  var output;
+  output = yield (Rest.post({
+    //url: "http://localhost:5000/query",
+    url: "https://activedata.allizom.org/query",
+    json: query
+  }));
   yield (output);
 };
 

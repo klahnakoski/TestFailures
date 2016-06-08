@@ -56,7 +56,7 @@ var _search;
         "where": {
           "and": [
             {"gte": {"timestamp": dateRange.min.unix()}},
-            {"lt": {"timestamp": dateRange.max.unix()}},
+            {"lte": {"timestamp": dateRange.max.unix()}},
             {"regex": {"test": ".*" + convert.String2RegExp(testName) + ".*"}},
             DEBUG ? debugFilter : true
           ]
