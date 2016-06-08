@@ -102,10 +102,15 @@ var _search;
           }));
           combo.count = undefined;
           combo.fails = undefined;
-          //PULL DATA AND SHOW CHART
-          (function(i){
-              showOne("chart" + i, Map.zip(Map.leafItems(combo)), dateRange);
-          })(i);
+
+          if (i<=10){
+            //PULL DATA AND SHOW CHART
+            (function(i){
+                showOne("chart" + i, Map.zip(Map.leafItems(combo)), dateRange);
+            })(i);
+          }else{
+            $("#chart"+i).html("not shown to limit data pulled")
+          }//endif
         });
 
       } finally {
