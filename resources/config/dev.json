@@ -1,20 +1,24 @@
 {
-	"constants": {
-		"pyLibrary.env.http.default_headers": {
-			"Referer": "https://github.com/klahnakoski/TestFailures",
-			"User-Agent": "TestFailures"
-		},
-		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000
+	"source":{
+		//"url":"http://localhost:5000/query"
+		"url":"http://activedata.allizom.org/query"
 	},
 	"destination": {
 		"host": "http://localhost",
 		"port": 9200,
-		"index": "test_summary",
-		"type": "result",
-		"schema": {"$ref":"../schema/test_summary.json"},
+		"index": "test_failures",
+		"type": "test_failures",
 		"timeout": 300,
-		"debug": true,
-		"limit_replicas": true
+		"schema": {
+			"$ref": "//../schema/test_failures.json"
+		},
+		"debug": false,
+		"limit_replicas": false
+	},
+	"constants": {
+		"pyLibrary.env.http.default_headers": {
+			"referer": ""
+		}
 	},
 	"debug": {
 		"trace": true,
@@ -27,11 +31,17 @@
 				"log_type": "console"
 			},
 			{
-				"log_type": "email",
+				"log_type": "elasticsearch",
+				"host": "http://localhost",
+				"index": "debug",
+				"type": "test_failure"
+			},
+			{
+				"log_type": "ses",
+				"$ref": "file://~/private.json#aws_credentials",
 				"from_address": "klahnakoski@mozilla.com",
 				"to_address": "klahnakoski@mozilla.com",
-				"subject": "[ALERT][Dev] Problem with Treeherder ETL",
-				"$ref": "file://~/private.json#email"
+				"subject": "[ALERT][DEV] Problem in Test Failure Summary"
 			}
 		]
 	}
