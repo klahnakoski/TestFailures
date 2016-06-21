@@ -1,3 +1,3 @@
 cd ~/TestFailures
 export PYTHONPATH=.
-app.py --settings=resources/config/prod.json
+python27 app.py --settings=resources/config/prod.json
