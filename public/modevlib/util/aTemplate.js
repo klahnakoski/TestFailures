@@ -109,6 +109,8 @@ var Template = function Template(template){
 			return _expand_items(template, namespaces);
 		} else if (template.from) {
 			return _expand_loop(template, namespaces);
+		}else if (isFunction(template)){
+			return _expand(template(namespaces[0]), namespaces);
 		} else {
 			Log.error("Not recognized {{template}}", {"template": template})
 		}//endif
@@ -128,8 +130,10 @@ var Template = function Template(template){
 			Log.error("expecting from clause to be string");
 		}//endif
 
-		return Map.get(namespaces[0], loop.from).map(function(m){
-			var namespace = Map.copy(namespaces[0]);
+		return Map.get(namespaces[0], loop.from).map(function(m, i){
+			var namespace = {};
+			namespace.rows = namespaces[0];
+			namespace.rownum = i;
 			namespace["."] = m;
 			if (m instanceof Object && !(m instanceof Array)) {
 				Map.forall(m, function(k, v){
