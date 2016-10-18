@@ -48,6 +48,7 @@ def agg(today, destination, debug_filter=None, please_stop=None):
             {"prefix": {"run.suite": suite}},
             {"gt": {"build.date": (today - 3 * DAY).unix}},
             {"lt": {"build.date": (today + 4 * DAY).unix}},
+            {"exists": "build.platform"},
             {"not": {"in": {"build.platform": EXCLUDE_PLATFORMS}}},
             {"not": {"in": {"build.branch": EXCLUDE_BRANCHES}}}
         ]}
@@ -122,15 +123,18 @@ def agg(today, destination, debug_filter=None, please_stop=None):
             # FOR EACH TEST, CALCULATE THE "RECENTLY BAD" STATISTIC (linear regression slope)
             # THIS IS ONLY A ROUGH CALC FOR TESTING THE UI
             for t in tests_summary.data:
-                t._id = "-".join([
-                    coalesce(t.build.product, ""),
-                    t.build.platform,
-                    coalesce(t.build.type, ""),
-                    coalesce(t.run.type, ""),
-                    t.run.suite,
-                    t.test,
-                    unicode(today.unix)
-                ])
+                try:
+                    t._id = "-".join([
+                        coalesce(t.build.product, ""),
+                        t.build.platform,
+                        coalesce(t.build.type, ""),
+                        coalesce(t.run.type, ""),
+                        t.run.suite,
+                        t.test,
+                        unicode(today.unix)
+                    ])
+                except Exception, e:
+                    Log.error("text join problem", cause=e)
                 t.timestamp = today
                 t.average = t.fails.avg
                 if t.date.var == 0:
