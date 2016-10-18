@@ -153,7 +153,7 @@ def loop_all_days(destination, please_stop):
         # ALL BUILD DATES WITH WITH ETL TIMESTAMP OF A WEEK AGO
         # ALL BUILD DATES THAT HAVE NOT BEEN PROCESSED YET
         build_dates = http.post_json(config.source.url, json={
-            "from": "unit",
+            "from": "unittest",
             "edges": [
                 {
                     "name": "date",
