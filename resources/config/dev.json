@@ -1,7 +1,7 @@
 {
 	"source":{
-		//"url":"http://localhost:5000/query"
-		"url":"http://activedata.allizom.org/query"
+		"url":"http://localhost:5000/query"
+//		"url":"http://activedata.allizom.org/query"
 	},
 	"destination": {
 		"host": "http://localhost",

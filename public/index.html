@@ -70,8 +70,9 @@ importScript(['js/util.js', 'js/failures.js', 'modevlib/gui/GUI.js', 'css/menu.c
 					{"name": "count", "value": "fails.count", "aggregate": "max"},
 					{"value": "fails.sum", "aggregate": "max"}
 				],
-				"edges": ["test"],
-				"where": {"and":[
+				"groupby": ["run.suite", "test", "build.platform", "build.type", "run.type"],
+				"where": {"and": [
+					{"not":{"in":{"test":["(SimpleTest/TestRunner.js)", "Main app process exited normally"]}}},
 					{"gte": {"timestamp": Date.today().subtract(Duration.DAY).unix()}},
 					{"gt": {"fails.count": 2}},
 					{"eq": {"build.product": "firefox"}}
@@ -94,8 +95,9 @@ importScript(['js/util.js', 'js/failures.js', 'modevlib/gui/GUI.js', 'css/menu.c
 					{"name": "count", "value":"fails.sum", "aggregate":"max"},
 					{"value":"slope", "aggregate":"max"}
 				],
-				"edges":["test"],
+				"groupby":["run.suite", "test", "build.platform", "build.type", "run.type"],
 				"where": {"and":[
+					{"not":{"in":{"test":["(SimpleTest/TestRunner.js)", "Main app process exited normally"]}}},
 					{"gte": {"timestamp": Date.today().subtract(Duration.WEEK).unix()}},
 					{"gt": {"fails.count": 2}},
 					{"eq": {"build.product": "firefox"}},
@@ -136,11 +138,17 @@ importScript(['js/util.js', 'js/failures.js', 'modevlib/gui/GUI.js', 'css/menu.c
 		'<table class="table" style="width:100%"><tr><th>Test Name</th><th>Fail Rate</th><th>Count</th></tr>',
 		{
 			"from":".",
-			"template":'<tr class="hoverable">' +
-			'<td><a link="{{url}}">{{test}}</a></td>' +
-			'<td style="text-align: right;">{{fail_rate|percent}}</td>' +
-			'<td style="text-align: right;">{{count}}</td>' +
-			'</tr>'
+			"template": [
+				'<tr class="hoverable">',
+				'<td><a link="{{url}}">{{test}}</a><br>{{build.platform}} ({{build.type}}) {{run.suite}}',
+				function(d){
+					return Map.get(d, "run.type") ? '({{run.type}})' : "";
+				},
+				': </td>',
+				'<td style="text-align: right;">{{fail_rate|percent}}</td>',
+				'<td style="text-align: right;">{{count}}</td>',
+				'</tr>'
+			]
 		},
 		'</table>'
 	]);
