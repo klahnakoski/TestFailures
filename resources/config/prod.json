@@ -30,6 +30,13 @@
 				"log_type": "console"
 			},
 			{
+				"class": "logging.handlers.RotatingFileHandler",
+				"filename": "logs/test_failure_agg.log",
+				"maxBytes": 10000000,
+				"backupCount": 10,
+				"encoding": "utf8"
+			},
+			{
 				"log_type": "ses",
 				"$ref": "file://~/private.json#aws_credentials",
 				"from_address": "klahnakoski@mozilla.com",
