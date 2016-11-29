@@ -8,13 +8,13 @@ var _search;
 
 (function(){
 
-  var DEBUG=false;
+  var DEBUG = false;
 
   var MAX_TESTS_PER_PAGE = 100;
   var CHART_TEMPLATE = new Template(
     '<div style="padding-top:10px;">' +
     '<h3>{{product|upper}} - {{platform}} {{suite}} ({{fail_rate|percent}} failures)</h3>' +
-    '{{test}}'+
+    '{{test}}' +
     '<div id="chart{{num}}" class="chart" style="height:300px;width:800px;"></div>' +
     '</div>');
 
@@ -23,7 +23,7 @@ var _search;
     '<b>Branch:</b> {{branch}}<br>' +
     '<b>Build Date:</b> {{build_date|format("NNN dd, HH:mm:ss")}}<br>' +
     '<b>Revision:</b> {{revision|left(12)}}<br>' +
-    '<b>Duration:</b> {{duration|round(3)}} seconds<br>'+
+    '<b>Duration:</b> {{duration|round(3)}} seconds<br>' +
     '<b>Chunk:</b> {{chunk}}'
   );
 
@@ -42,7 +42,7 @@ var _search;
       var partitions = yield (query({
         "select": [
           {"value": "fails.sum", "aggregate": "sum"},
-          {"value": "fails.count", "aggregate":"sum"}
+          {"value": "fails.count", "aggregate": "sum"}
         ],
         "from": "failures",
         "groupby": [
@@ -74,19 +74,19 @@ var _search;
       // JUST IN CASE ActiveData DID NOT SORT
       partitions.data = qb.sort(partitions.data, {"value": "fails.avg", "sort": -1});
 
-      try{
+      try {
         var chartArea = $("#charts");
-        if (partitions.data.length>MAX_TESTS_PER_PAGE) {
+        if (partitions.data.length > MAX_TESTS_PER_PAGE) {
           chartArea.html(partitions.data.length + " is too many combinations");
           return;
-        }else if (partitions.data.length==0){
+        } else if (partitions.data.length == 0) {
           chartArea.html("Test not found");
           return;
         }//endif
 
         chartArea.html("");
         partitions.data.forall(function(combo, i){
-          if (DEBUG && i>0) return;
+          if (DEBUG && i > 0) return;
           var product = combo.build.product;
           var platform = combo.build.platform + (combo.build.type ? (" (" + combo.build.type + ")") : "");
           var suite = combo.run.suite + (combo.run.type ? (" (" + combo.run.type + ")") : "");
@@ -94,7 +94,7 @@ var _search;
           var fail_rate = combo.fails.avg;
           chartArea.append(CHART_TEMPLATE.expand({
             "num": i,
-            "product":product,
+            "product": product,
             "platform": platform,
             "suite": suite,
             "test": test,
@@ -103,13 +103,13 @@ var _search;
           combo.count = undefined;
           combo.fails = undefined;
 
-          if (i<=10){
+          if (i <= 10) {
             //PULL DATA AND SHOW CHART
             (function(i){
-                showOne("chart" + i, Map.zip(Map.leafItems(combo)), dateRange);
+              showOne("chart" + i, Map.zip(Map.leafItems(combo)), dateRange);
             })(i);
-          }else{
-            $("#chart"+i).html("not shown to limit data pulled")
+          } else {
+            $("#chart" + i).html("not shown to limit data pulled")
           }//endif
         });
 
@@ -139,11 +139,11 @@ var _search;
             "_id",
             {"name": "suite", "value": "run.suite"},
             {"name": "chunk", "value": "run.chunk"},
-            {"name": "duration", "value": {"coalesce":["result.duration", -1]}},
+            {"name": "duration", "value": {"coalesce": ["result.duration", -1]}},
             {"name": "test", "value": "test"},
             {"name": "platform", "value": "build.platform"},
             {"name": "build_type", "value": "build.type"},
-            {"name": "build_date", "value": "build.date"},
+            {"name": "build_date", "value": "repo.push.date"},
             {"name": "branch", "value": "build.branch"},
             {"name": "revision", "value": "build.revision12"},
             {"name": "ok", "value": "result.ok"},
@@ -162,12 +162,12 @@ var _search;
           "where": {
             "and": [
               {"neq": {"build.branch": "try"}},
-              {"gte": {"build.date": dateRange.min.unix()}},
-              {"lt": {"build.date": dateRange.max.unix()}},
+              {"gte": {"repo.push.date": dateRange.min.unix()}},
+              {"lt": {"repo.push.date": dateRange.max.unix()}},
               {"eq": group}
             ]
           },
-          "sort": "build.date",
+          "sort": "repo.push.date",
           "limit": (DEBUG ? 100 : 100000),
           "format": "list"
         }));
@@ -188,13 +188,13 @@ var _search;
             last_build_date = d.build_date;
             offset = 0;
           }//endif
-          d.build_date=Date.newInstance(d.build_date);
+          d.build_date = Date.newInstance(d.build_date);
         });
       }
 
       a = Log.action("Make chart", true);
-      if (result.data.length==0){
-        $("#"+target).html("no data");
+      if (result.data.length == 0) {
+        $("#" + target).html("no data");
         return;
       }//endif
 
@@ -203,7 +203,7 @@ var _search;
         aChart.showScatter({
           "target": target,
           "data": result.data,
-          "tip":{
+          "tip": {
             "format": HOVER
           },
           "click": function(d){
@@ -222,11 +222,11 @@ var _search;
               "value": "build_date",
               "range": dateRange
             },
-            "y":{
+            "y": {
               "value": "duration",
-              "range":{"max":aChart.maxNice(result.data.select("duration"))}
+              "range": {"max": aChart.maxNice(result.data.select("duration"))}
             },
-            "color":{
+            "color": {
               "domain": {
                 "type": "set", "partitions": [
                   {"name": "pass", "value": "pass", "style": {"color": "#1f77b4"}},
