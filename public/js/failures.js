@@ -151,7 +151,7 @@ var _search;
               "name": "status",
               "value": {
                 "case": [
-                  {"when": {"missing": "duration"}, "then": {"literal": "incomplete"}},
+                  {"when": {"missing": "result.duration"}, "then": {"literal": "incomplete"}},
                   {"when": "result.ok", "then": {"literal": "pass"}},
                   {"literal": "fail"}
                 ]
