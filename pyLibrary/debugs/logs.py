@@ -20,13 +20,12 @@ from collections import Mapping
 from datetime import datetime
 
 from pyLibrary.debugs import constants, exceptions
-from pyLibrary.debugs.exceptions import Except
+from pyLibrary.debugs.exceptions import Except, suppress_exception
 from pyLibrary.debugs.text_logs import TextLog_usingMulti, TextLog_usingThread, TextLog_usingStream, TextLog_usingFile
-from pyLibrary.dot import coalesce, listwrap, wrap, unwrap, unwraplist, Null, set_default
+from pyLibrary.dot import coalesce, listwrap, wrap, unwrap, unwraplist, set_default
 from pyLibrary.strings import indent
-from pyLibrary.thread.threads import Thread, Queue
-from pyLibrary.times.durations import SECOND
 
+_Thread = None
 
 class Log(object):
     """
@@ -37,7 +36,7 @@ class Log(object):
     logging_multi = None
     profiler = None   # simple pypy-friendly profiler
     cprofiler = None  # screws up with pypy, but better than nothing
-    cprofiler_stats = Queue("cprofiler stats")  # ACCUMULATION OF STATS FROM ALL THREADS
+    cprofiler_stats = None
     error_mode = False  # prevent error loops
 
     @classmethod
@@ -54,6 +53,7 @@ class Log(object):
                     USE THE LONG FORM TO SET FILENAME {"enabled": True, "filename": "profile.tab"}
         constants - UPDATE MODULE CONSTANTS AT STARTUP (PRIMARILY INTENDED TO CHANGE DEBUG STATE)
         """
+        global _Thread
         if not settings:
             return
         settings = wrap(settings)
@@ -61,7 +61,7 @@ class Log(object):
         cls.settings = settings
         cls.trace = cls.trace | coalesce(settings.trace, False)
         if cls.trace:
-            from pyLibrary.thread.threads import Thread
+            from pyLibrary.thread.threads import Thread as _Thread
 
         if settings.cprofile is False:
             settings.cprofile = {"enabled": False}
@@ -104,6 +104,11 @@ class Log(object):
         from pyLibrary.debugs import profiles
 
         if cls.cprofiler and hasattr(cls, "settings"):
+            if cls.cprofiler == None:
+                from pyLibrary.thread.threads import Queue
+
+                cls.cprofiler_stats = Queue("cprofiler stats")  # ACCUMULATION OF STATS FROM ALL THREADS
+
             import pstats
             cls.cprofiler_stats.add(pstats.Stats(cls.cprofiler))
             write_profile(cls.settings.cprofile, cls.cprofiler_stats.pop_all())
@@ -123,12 +128,11 @@ class Log(object):
 
                 return TextLog_usingLogger(settings)
             else:
-                try:
+                with suppress_exception:
                     from .log_usingLogger import make_log_from_settings
 
                     return make_log_from_settings(settings)
-                except Exception, e:
-                    pass  # OH WELL :(
+                  # OH WELL :(
 
         if settings.log_type == "file" or settings.file:
             return TextLog_usingFile(settings.file)
@@ -149,6 +153,9 @@ class Log(object):
         if settings.log_type == "ses":
             from .log_usingSES import TextLog_usingSES
             return TextLog_usingSES(settings)
+        if settings.log_type.lower() in ["nothing", "none", "null"]:
+            from .log_usingNothing import TextLog_usingNothing
+            return TextLog_usingNothing()
 
         Log.error("Log type of {{log_type|quote}} is not recognized", log_type=settings.log_type)
 
@@ -196,7 +203,7 @@ class Log(object):
                 "file": f.f_code.co_filename.split(os.sep)[-1],
                 "method": f.f_code.co_name
             }
-            thread = Thread.current()
+            thread = _Thread.current()
             log_params.thread = {"name": thread.name, "id": thread.id}
         else:
             log_template = "{{timestamp|datetime}} - " + template.replace("{{", "{{params.")
@@ -401,7 +408,7 @@ class Log(object):
         str_e = unicode(e)
 
         error_mode = cls.error_mode
-        try:
+        with suppress_exception:
             if not error_mode:
                 cls.error_mode = True
                 Log.note(
@@ -410,8 +417,6 @@ class Log(object):
                     log_context=set_default({"context": exceptions.FATAL}, log_context),
                     stack_depth=stack_depth + 1
                 )
-        except Exception:
-            pass
         cls.error_mode = error_mode
 
         sys.stderr.write(str_e.encode('utf8'))
@@ -452,19 +457,6 @@ machine_metadata = wrap({
     "name": platform.node()
 })
 
-
-# GET FROM AWS, IF WE CAN
-def _get_metadata_from_from_aws(please_stop):
-    try:
-        from pyLibrary import aws
-
-        ec2 = aws.get_instance_metadata()
-        if ec2:
-            machine_metadata.aws_instance_type = ec2.instance_type
-            machine_metadata.name = ec2.instance_id
-    except Exception:
-        pass
-Thread.run("get aws machine metadata", _get_metadata_from_from_aws)
 
 if not Log.main_log:
     Log.main_log = TextLog_usingStream(sys.stdout)

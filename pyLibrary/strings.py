@@ -36,22 +36,22 @@ _Duration = None
 
 def _late_import():
     global _json_encoder
-    global _convert
     global _Log
     global _Except
     global _Duration
+    global _convert
 
     from pyLibrary.jsons.encoder import json_encoder as _json_encoder
-    from pyLibrary import convert as _convert
     from pyLibrary.debugs.logs import Log as _Log
     from pyLibrary.debugs.exceptions import Except as _Except
     from pyLibrary.times.durations import Duration as _Duration
+    from pyLibrary import convert as _convert
 
     _ = _json_encoder
-    _ = _convert
     _ = _Log
     _ = _Except
     _ = _Duration
+    _ = _convert
 
 
 def datetime(value):
@@ -624,14 +624,15 @@ def utf82unicode(value):
         try:
             latin1 = _unicode(value.decode("latin1"))
             _Log.error("Can not explain conversion failure, but seems to be latin1", e)
-        except Exception, f:
+        except Exception:
             pass
 
         try:
             a = _unicode(value.decode("iso-8859-1"))
             _Log.error("Can not explain conversion failure, but seems to be iso-8859-1", e)
-        except Exception, f:
+        except Exception:
             pass
+
 
         _Log.error("Can not explain conversion failure of " + type(value).__name__ + "!", e)
 

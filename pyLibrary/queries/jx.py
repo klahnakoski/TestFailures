@@ -8,9 +8,10 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+
 import __builtin__
 from collections import Mapping
 from types import GeneratorType
@@ -20,20 +21,20 @@ import itertools
 from pyLibrary import dot, convert
 from pyLibrary.collections import UNION, MIN
 from pyLibrary.debugs.logs import Log
+from pyLibrary.dot import listwrap, wrap, unwrap, unwraplist
 from pyLibrary.dot import set_default, Null, Dict, split_field, coalesce, join_field
 from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import listwrap, wrap, unwrap
 from pyLibrary.dot.objects import DictObject
 from pyLibrary.maths import Math
 from pyLibrary.queries import flat_list, query, group_by
 from pyLibrary.queries.containers import Container
+from pyLibrary.queries.containers.cube import Cube
 from pyLibrary.queries.cubes.aggs import cube_aggs
 from pyLibrary.queries.expression_compiler import compile_expression
 from pyLibrary.queries.expressions import TRUE_FILTER, FALSE_FILTER, jx_expression_to_function
 from pyLibrary.queries.flat_list import FlatList
 from pyLibrary.queries.index import Index
-from pyLibrary.queries.query import QueryOp, _normalize_selects, sort_direction, _normalize_select
-from pyLibrary.queries.containers.cube import Cube
+from pyLibrary.queries.query import QueryOp, _normalize_selects, sort_direction
 from pyLibrary.queries.unique_index import UniqueIndex
 
 # A COLLECTION OF DATABASE OPERATORS (RELATIONAL ALGEBRA OPERATORS)
@@ -41,6 +42,7 @@ from pyLibrary.queries.unique_index import UniqueIndex
 # START HERE: https://github.com/klahnakoski/jx/blob/master/docs/jx_reference.md
 # TODO: USE http://docs.sqlalchemy.org/en/latest/core/tutorial.html AS DOCUMENTATION FRAMEWORK
 
+builtin_tuple = tuple
 _Column = None
 _merge_type = None
 
@@ -52,28 +54,32 @@ def get(expr):
     return jx_expression_to_function(expr)
 
 
-def run(query, frum=None):
+def run(query, frum=Null):
     """
     THIS FUNCTION IS SIMPLY SWITCHING BASED ON THE query["from"] CONTAINER,
     BUT IT IS ALSO PROCESSING A list CONTAINER; SEPARATE TO A ListContainer
     """
-    query = QueryOp.wrap(query)
-    frum = coalesce(frum, query["from"])
+    if frum == None:
+        query_op = QueryOp.wrap(query)
+        frum = query_op.frum
+    else:
+        query_op = QueryOp.wrap(query, frum.schema)
+
     if isinstance(frum, Container):
-        return frum.query(query)
+        return frum.query(query_op)
     elif isinstance(frum, (list, set, GeneratorType)):
         frum = wrap(list(frum))
     elif isinstance(frum, Cube):
-        if is_aggs(query):
-            return cube_aggs(frum, query)
+        if is_aggs(query_op):
+            return cube_aggs(frum, query_op)
 
     elif isinstance(frum, QueryOp):
         frum = run(frum)
     else:
-        Log.error("Do not know how to handle {{type}}",  type=frum.__class__.__name__)
+        Log.error("Do not know how to handle {{type}}", type=frum.__class__.__name__)
 
-    if is_aggs(query):
-        frum = list_aggs(frum, query)
+    if is_aggs(query_op):
+        frum = list_aggs(frum, query_op)
     else:  # SETOP
         # try:
         #     if query.filter != None or query.esfilter != None:
@@ -81,26 +87,26 @@ def run(query, frum=None):
         # except AttributeError:
         #     pass
 
-        if query.where is not TRUE_FILTER:
-            frum = filter(frum, query.where)
+        if query_op.where is not TRUE_FILTER:
+            frum = filter(frum, query_op.where)
 
-        if query.sort:
-            frum = sort(frum, query.sort, already_normalized=True)
+        if query_op.sort:
+            frum = sort(frum, query_op.sort, already_normalized=True)
 
-        if query.select:
-            frum = select(frum, query.select)
+        if query_op.select:
+            frum = select(frum, query_op.select)
 
-    if query.window:
+    if query_op.window:
         if isinstance(frum, Cube):
             frum = list(frum.values())
 
-        for param in query.window:
+        for param in query_op.window:
             window(frum, param)
 
     # AT THIS POINT frum IS IN LIST FORMAT, NOW PACKAGE RESULT
-    if query.format == "cube":
+    if query_op.format == "cube":
         frum = convert.list2cube(frum)
-    elif query.format == "table":
+    elif query_op.format == "table":
         frum = convert.list2table(frum)
         frum.meta.format = "table"
     else:
@@ -335,7 +341,7 @@ def _select(template, data, fields, depth):
                 path = f.value[0:index:]
                 if not deep_fields[f]:
                     deep_fields.add(f)  # KEEP TRACK OF WHICH FIELDS NEED DEEPER SELECT
-                short = MIN(len(deep_path), len(path))
+                short = MIN([len(deep_path), len(path)])
                 if path[:short:] != deep_path[:short:]:
                     Log.error("Dangerous to select into more than one branch at time")
                 if len(deep_path) < len(path):
@@ -560,9 +566,9 @@ def value_compare(l, r, ordering=1):
         if r == None:
             return 0
         else:
-            return - ordering
+            return ordering
     elif r == None:
-        return ordering
+        return - ordering
 
     if isinstance(l, list) or isinstance(r, list):
         for a, b in zip(listwrap(l), listwrap(r)):
@@ -576,6 +582,12 @@ def value_compare(l, r, ordering=1):
             return ordering
         else:
             return 0
+    elif isinstance(l, builtin_tuple) and isinstance(r, builtin_tuple):
+        for a, b in zip(l, r):
+            c = value_compare(a, b) * ordering
+            if c != 0:
+                return c
+        return 0
     elif isinstance(l, Mapping):
         if isinstance(r, Mapping):
             for k in sorted(set(l.keys()) | set(r.keys())):
@@ -619,7 +631,7 @@ def filter(data, where):
     if isinstance(data, (list, set)):
         temp = jx_expression_to_function(where)
         dd = wrap(data)
-        return [d for i, d in enumerate(data) if temp(wrap(d), i, dd)]
+        return wrap([unwrap(d) for i, d in enumerate(data) if temp(wrap(d), i, dd)])
     else:
         Log.error("Do not know how to handle type {{type}}", type=data.__class__.__name__)
 
@@ -938,7 +950,7 @@ def window(data, param):
     edges = param.edges          # columns to gourp by
     where = param.where          # DO NOT CONSIDER THESE VALUES
     sortColumns = param.sort     # columns to sort by
-    calc_value = wrap_function(jx_expression_to_function(param.value))  # function that takes a record and returns a value (for aggregation)
+    calc_value = jx_expression_to_function(param.value)  # function that takes a record and returns a value (for aggregation)
     aggregate = param.aggregate  # WindowFunction to apply
     _range = param.range         # of form {"min":-10, "max":0} to specify the size and relative position of window
 
@@ -957,7 +969,10 @@ def window(data, param):
             if not values:
                 continue     # CAN DO NOTHING WITH THIS ZERO-SAMPLE
 
-            sequence = sort(values, sortColumns, already_normalized=True)
+            if sortColumns:
+                sequence = sort(values, sortColumns, already_normalized=True)
+            else:
+                sequence = values
 
             for rownum, r in enumerate(sequence):
                 r[name] = calc_value(r, rownum, sequence)

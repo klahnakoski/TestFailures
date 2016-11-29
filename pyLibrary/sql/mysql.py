@@ -26,7 +26,7 @@ from pyLibrary.sql import SQL
 from pyLibrary.strings import expand_template
 from pyLibrary.dot import coalesce, wrap, listwrap, unwrap
 from pyLibrary import convert
-from pyLibrary.debugs.exceptions import Except
+from pyLibrary.debugs.exceptions import Except, suppress_exception
 from pyLibrary.debugs.logs import Log
 from pyLibrary.queries import jx
 from pyLibrary.strings import indent
@@ -95,7 +95,8 @@ class MySQL(object):
                 passwd=coalesce(self.settings.password, self.settings.passwd),
                 db=coalesce(self.settings.schema, self.settings.db),
                 charset=u"utf8",
-                use_unicode=True
+                use_unicode=True,
+                ssl=coalesce(self.settings.ssl, None)
             )
         except Exception, e:
             if self.settings.host.find("://") == -1:
@@ -172,20 +173,17 @@ class MySQL(object):
         try:
             self._execute_backlog()
         except Exception, e:
-            try:
+            with suppress_exception:
                 self.rollback()
-            except Exception:
-                pass
             Log.error("Error while processing backlog", e)
 
         if self.transaction_level == 0:
             Log.error("No transaction has begun")
         elif self.transaction_level == 1:
             if self.partial_rollback:
-                try:
+                with suppress_exception:
                     self.rollback()
-                except Exception:
-                    pass
+
                 Log.error("Commit after nested rollback is not allowed")
             else:
                 if self.cursor: self.cursor.close()
@@ -420,10 +418,8 @@ class MySQL(object):
         # have to shell out to the commandline client.
         sql = File(filename).read()
         if ignore_errors:
-            try:
+            with suppress_exception:
                 MySQL.execute_sql(sql=sql, param=param, settings=settings)
-            except Exception, e:
-                pass
         else:
             MySQL.execute_sql(settings, sql, param)
 
@@ -592,7 +588,9 @@ class MySQL(object):
             Log.error("problem quoting SQL", e)
 
     def quote_column(self, column_name, table=None):
-        if isinstance(column_name, basestring):
+        if column_name==None:
+            Log.error("missing column_name")
+        elif isinstance(column_name, basestring):
             if table:
                 column_name = table + "." + column_name
             return SQL("`" + column_name.replace(".", "`.`") + "`")    # MY SQL QUOTE OF COLUMN NAMES
@@ -737,3 +735,28 @@ def json_encode(value):
     """
     return unicode(json_encoder.encode(jsons.scrub(value)))
 
+
+mysql_type_to_json_type = {
+    "bigint": "number",
+    "blob": "string",
+    "char": "string",
+    "datetime": "number",
+    "decimal": "number",
+    "double": "number",
+    "enum": "number",
+    "float": "number",
+    "int": "number",
+    "longblob": "string",
+    "longtext": "string",
+    "mediumblob": "string",
+    "mediumint": "number",
+    "mediumtext": "string",
+    "set": "array",
+    "smallint": "number",
+    "text": "string",
+    "time": "number",
+    "timestamp": "number",
+    "tinyint": "number",
+    "tinytext": "number",
+    "varchar": "string"
+}

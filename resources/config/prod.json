@@ -30,17 +30,18 @@
 				"log_type": "console"
 			},
 			{
-				"log_type": "elasticsearch",
-				"host": "http://localhost",
-				"index": "debug",
-				"type": "test_failure"
+				"class": "logging.handlers.RotatingFileHandler",
+				"filename": "logs/test_failure_agg.log",
+				"maxBytes": 10000000,
+				"backupCount": 10,
+				"encoding": "utf8"
 			},
 			{
 				"log_type": "ses",
 				"$ref": "file://~/private.json#aws_credentials",
 				"from_address": "klahnakoski@mozilla.com",
 				"to_address": "klahnakoski@mozilla.com",
-				"subject": "[ALERT][DEV] Problem in Test Failure Summary"
+				"subject": "[ALERT][Staging] Problem in Test Failure Summary"
 			}
 		]
 	}

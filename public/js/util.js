@@ -17,6 +17,7 @@ var query = function*(query){
   var output;
   output = yield (Rest.post({
     //url: "http://localhost:5000/query",
+    //url: "http://52.40.150.20/query",
     url: "https://activedata.allizom.org/query",
     json: query
   }));

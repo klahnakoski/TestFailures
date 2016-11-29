@@ -7,26 +7,26 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
 from pyLibrary import queries
-from pyLibrary.collections.matrix import Matrix
 from pyLibrary.collections import AND
-from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, literal_field, join_field, unwrap, wrap
-from pyLibrary.dot.lists import DictList
-from pyLibrary.dot import listwrap
-from pyLibrary.maths import Math
+from pyLibrary.collections.matrix import Matrix
 from pyLibrary.debugs.logs import Log
+from pyLibrary.dot import coalesce, split_field, set_default, Dict, unwraplist, literal_field, join_field, unwrap, wrap
+from pyLibrary.dot import listwrap
+from pyLibrary.dot.lists import DictList
+from pyLibrary.maths import Math
 from pyLibrary.queries import es14, es09
+from pyLibrary.queries.containers import STRUCT
 from pyLibrary.queries.containers.cube import Cube
-from pyLibrary.queries.domains import is_keyword, ALGEBRAIC
+from pyLibrary.queries.domains import ALGEBRAIC
 from pyLibrary.queries.es14.util import jx_sort_to_es_sort
-from pyLibrary.queries.expressions import simplify_esfilter, jx_expression, Variable, LeavesOp
+from pyLibrary.queries.expressions import simplify_esfilter, Variable, LeavesOp
 from pyLibrary.queries.query import DEFAULT_LIMIT
 from pyLibrary.times.timer import Timer
-
 
 format_dispatch = {}
 
@@ -64,32 +64,34 @@ def es_setop(es, query):
 
 def extract_rows(es, es_query, query):
     is_list = isinstance(query.select, list)
-    select = wrap([s.copy() for s in listwrap(query.select)])
+    selects = wrap([s.copy() for s in listwrap(query.select)])
     new_select = DictList()
     columns = query.frum.get_columns()
-    leaf_columns = set(c.name for c in columns if c.type not in ["object", "nested"] and (not c.nested_path or c.es_column == c.nested_path))
-    nested_columns = set(c.name for c in columns if c.nested_path)
+    leaf_columns = set(c.name for c in columns if c.type not in STRUCT and (c.nested_path[0] == "." or c.es_column == c.nested_path))
+    nested_columns = set(c.name for c in columns if len(c.nested_path) != 1)
 
     i = 0
     source = "fields"
-    for s in select:
+    for select in selects:
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
-        if isinstance(s.value, LeavesOp):
-            if isinstance(s.value.term, Variable):
-                if s.value.term.var == ".":
+        if isinstance(select.value, LeavesOp):
+            term = select.value.term
+            if isinstance(term, Variable):
+
+                if term.var == ".":
                     es_query.fields = None
                     source = "_source"
 
-                    net_columns = leaf_columns - set(select.name)
+                    net_columns = leaf_columns - set(selects.name)
                     for n in net_columns:
                         new_select.append({
                             "name": n,
-                            "value": n,
+                            "value": Variable(n),
                             "put": {"name": n, "index": i, "child": "."}
                         })
                         i += 1
                 else:
-                    parent = s.value.var + "."
+                    parent = term.var + "."
                     prefix = len(parent)
                     for c in leaf_columns:
                         if c.startswith(parent):
@@ -97,53 +99,53 @@ def extract_rows(es, es_query, query):
                                 es_query.fields.append(c)
 
                             new_select.append({
-                                "name": s.name + "." + c[prefix:],
-                                "value": c,
-                                "put": {"name": s.name + "." + c[prefix:], "index": i, "child": "."}
+                                "name": select.name + "." + c[prefix:],
+                                "value": Variable(c),
+                                "put": {"name": select.name + "." + c[prefix:], "index": i, "child": "."}
                             })
                             i += 1
 
-        elif isinstance(s.value, Variable):
-            if s.value.var == ".":
+        elif isinstance(select.value, Variable):
+            if select.value.var == ".":
                 es_query.fields = None
                 source = "_source"
 
                 new_select.append({
-                    "name": s.name,
-                    "value": s.value.var,
-                    "put": {"name": s.name, "index": i, "child": "."}
+                    "name": select.name,
+                    "value": select.value,
+                    "put": {"name": select.name, "index": i, "child": "."}
                 })
                 i += 1
-            elif s.value.var == "_id":
+            elif select.value.var == "_id":
                 new_select.append({
-                    "name": s.name,
-                    "value": s.value.var,
+                    "name": select.name,
+                    "value": select.value,
                     "pull": "_id",
-                    "put": {"name": s.name, "index": i, "child": "."}
+                    "put": {"name": select.name, "index": i, "child": "."}
                 })
                 i += 1
-            elif s.value.var in nested_columns:
+            elif select.value.var in nested_columns or [c for c in nested_columns if c.startswith(select.value.var+".")]:
                 es_query.fields = None
                 source = "_source"
 
                 new_select.append({
-                    "name": s.name,
-                    "value": s.value,
-                    "put": {"name": s.name, "index": i, "child": "."}
+                    "name": select.name,
+                    "value": select.value,
+                    "put": {"name": select.name, "index": i, "child": "."}
                 })
                 i += 1
             else:
-                parent = s.value.var + "."
+                parent = select.value.var + "."
                 prefix = len(parent)
                 net_columns = [c for c in leaf_columns if c.startswith(parent)]
                 if not net_columns:
                     # LEAF
                     if es_query.fields is not None:
-                        es_query.fields.append(s.value.var)
+                        es_query.fields.append(select.value.var)
                     new_select.append({
-                        "name": s.name,
-                        "value": s.value,
-                        "put": {"name": s.name, "index": i, "child": "."}
+                        "name": select.name,
+                        "value": select.value,
+                        "put": {"name": select.name, "index": i, "child": "."}
                     })
                 else:
                     # LEAVES OF OBJECT
@@ -151,17 +153,17 @@ def extract_rows(es, es_query, query):
                         if es_query.fields is not None:
                             es_query.fields.append(n)
                         new_select.append({
-                            "name": s.name,
-                            "value": n,
-                            "put": {"name": s.name, "index": i, "child": n[prefix:]}
+                            "name": select.name,
+                            "value": Variable(n),
+                            "put": {"name": select.name, "index": i, "child": n[prefix:]}
                         })
                 i += 1
         else:
-            es_query.script_fields[literal_field(s.name)] = {"script": s.value.to_ruby()}
+            es_query.script_fields[literal_field(select.name)] = {"script": select.value.to_ruby()}
             new_select.append({
-                "name": s.name,
-                "pull": "fields." + literal_field(s.name),
-                "put": {"name": s.name, "index": i, "child": "."}
+                "name": select.name,
+                "pull": "fields." + literal_field(select.name),
+                "put": {"name": select.name, "index": i, "child": "."}
             })
             i += 1
 
@@ -169,9 +171,11 @@ def extract_rows(es, es_query, query):
         if n.pull:
             continue
         if source == "_source":
-            n.pull = join_field(["_source"] + split_field(n.value))
+            n.pull = join_field(["_source"] + split_field(n.value.var))
+        elif isinstance(n.value, Variable):
+            n.pull = "fields." + literal_field(n.value.var)
         else:
-            n.pull = "fields." + literal_field(n.value)
+            Log.error("Do not know what to do")
 
     with Timer("call to ES") as call_timer:
         data = es09.util.post(es, es_query, query.limit)
@@ -192,7 +196,13 @@ def extract_rows(es, es_query, query):
 
 def format_list(T, select, query=None):
     data = []
-    if isinstance(query.select, list) or (isinstance(query.select.value, basestring) and query.select.value.endswith("*")):
+    if isinstance(query.select, list):
+        for row in T:
+            r = Dict()
+            for s in select:
+                r[s.put.name][s.put.child] = unwraplist(row[s.pull])
+            data.append(r if r else None)
+    elif isinstance(query.select.value, LeavesOp):
         for row in T:
             r = Dict()
             for s in select:
@@ -202,7 +212,7 @@ def format_list(T, select, query=None):
         for row in T:
             r = Dict()
             for s in select:
-                r[s.put.name][s.put.child] = unwraplist(row[s.pull])
+                r[s.put.child] = unwraplist(row[s.pull])
             data.append(r if r else None)
 
     return Dict(
