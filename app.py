@@ -122,6 +122,7 @@ def agg(today, destination, debug_filter=None, please_stop=None):
 
             # FOR EACH TEST, CALCULATE THE "RECENTLY BAD" STATISTIC (linear regression slope)
             # THIS IS ONLY A ROUGH CALC FOR TESTING THE UI
+            Log.note("Make _ids for test summaries", num=len(tests_summary.data))
             for t in tests_summary.data:
                 try:
                     t._id = "-".join([
