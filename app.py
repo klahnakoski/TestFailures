@@ -169,11 +169,11 @@ def loop_all_days(destination, please_stop):
                         "min": "today-week",
                         "max": "eod",
                         "interval": "day"
-                    }
+                    },
                 }
             ],
             "where": {"gte": {"etl.timestamp": (today - WEEK).unix}},
-            "sort": {"value": "build.date", "sort": -1},
+
             "limit": 14,
             "format": "list"
         })
