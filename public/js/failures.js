@@ -80,7 +80,7 @@ var _search;
           chartArea.html(partitions.data.length + " is too many combinations");
           return;
         } else if (partitions.data.length == 0) {
-          chartArea.html("Test not found");
+          chartArea.html("Test not found, or never failed");
           return;
         }//endif
 
