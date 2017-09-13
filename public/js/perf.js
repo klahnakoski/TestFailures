@@ -61,7 +61,7 @@ var _perf_search;
 
         var chartArea = $("#charts");
         if (partitions.data.length == 0) {
-          chartArea.html("Test not found");
+          chartArea.html("Test not found, or never failed");
           return;
         }//endif
       });
@@ -101,9 +101,6 @@ var _perf_search;
           return;
         }//endif
       });
-
-
-
 
 
       Thread.run(function*(){

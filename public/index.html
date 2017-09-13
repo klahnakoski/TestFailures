@@ -140,7 +140,7 @@ importScript(['js/util.js', 'js/failures.js', 'modevlib/gui/GUI.js', 'css/menu.c
 			"from":".",
 			"template": [
 				'<tr class="hoverable">',
-				'<td><a link="{{url}}">{{test}}</a><br>{{build.platform}} ({{build.type}}) {{run.suite}}',
+				'<td><a link="{{url}}">{{test|html}}</a><br>{{build.platform}} ({{build.type}}) {{run.suite}}',
 				function(d){
 					return Map.get(d, "run.type") ? '({{run.type}})' : "";
 				},
