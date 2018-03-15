@@ -6,8 +6,8 @@
 	"destination": {
 		"host": "http://localhost",
 		"port": 9200,
-		"index": "test_failures",
-		"type": "test_failures",
+		"index": "unittest-summary",
+		"type": "test_summary",
 		"timeout": 300,
 		"schema": {
 			"$ref": "//../schema/test_failures.json"

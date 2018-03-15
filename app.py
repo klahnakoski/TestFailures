@@ -11,20 +11,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-import sys
+from jx_python import jx
+from mo_dots import wrap, coalesce
+from mo_future import text_type
+from mo_json import value2json
+from mo_logs import Log, startup, constants
+from mo_threads import Signal, Thread
+from mo_times import DAY, Date, WEEK
+from pyLibrary.env import http, elasticsearch
 
-from pyLibrary import convert
-from pyLibrary.debugs import constants
-from pyLibrary.debugs import startup
-from pyLibrary.debugs.logs import Log
-from pyLibrary.dot import coalesce, wrap
-from pyLibrary.env import elasticsearch, http
-from pyLibrary.queries import jx
-from pyLibrary.thread.threads import Thread, Signal
-from pyLibrary.times.dates import Date
-from pyLibrary.times.durations import WEEK, DAY
-
-SUITES = ["mochitest", "web-platform-tests", "reftest", "xpcshell", ]
+SUITES = ["mochitest", "web-platform-tests", "xpcshell"]
 EXCLUDE_PLATFORMS = []
 EXCLUDE_BRANCHES = ["try"]
 
@@ -46,8 +42,8 @@ def agg(today, destination, debug_filter=None, please_stop=None):
     for suite in SUITES:
         domain = {"and": [
             {"prefix": {"run.suite": suite}},
-            {"gt": {"build.date": (today - 3 * DAY).unix}},
-            {"lt": {"build.date": (today + 4 * DAY).unix}},
+            {"gt": {"build.date": today.unix}},
+            {"lt": {"build.date": (today+DAY).unix}},
             {"exists": "build.platform"},
             {"not": {"in": {"build.platform": EXCLUDE_PLATFORMS}}},
             {"not": {"in": {"build.branch": EXCLUDE_BRANCHES}}}
@@ -55,26 +51,23 @@ def agg(today, destination, debug_filter=None, please_stop=None):
         if debug_filter:
             domain['and'].append(debug_filter)
 
-        _ = convert.value2json("\"\"")
+        _ = value2json('""')
 
         # WE CAN NOT PULL ALL TESTS, THERE ARE TOO MANY, SO DO ONE SUITE AT A TIME
-        Log.note("Get summary of failures in {{suite}} for date {{date}}", suite=suite, date=today)
+        Log.note("Get summary of tests in {{suite}} for date {{date}}", suite=suite, date=today)
         suite_summary = http.post_json(config.source.url, json={
             "from": "unittest",
             "groupby": [
                 {"name": "test", "value": "result.test"}
             ],
             "where": {"and": [
-                domain,
-                {"eq": {"result.ok": False}}
+                domain
             ]},
             "format": "list",
             "limit": 100000
         })
 
-        often_fail = jx.filter(suite_summary.data, {"gt": {"count": 1}})
-
-        for g, tests in jx.groupby(often_fail, size=100):
+        for g, tests in jx.groupby(suite_summary.data.test, size=100):
             tests = wrap(tests)
             if please_stop:
                 return
@@ -85,6 +78,7 @@ def agg(today, destination, debug_filter=None, please_stop=None):
                 "groupby": [
                     "run.suite",
                     {"name": "test", "value": "result.test"},
+                    "build.branch",
                     "build.platform",
                     "build.product",
                     "build.type",
@@ -92,24 +86,17 @@ def agg(today, destination, debug_filter=None, please_stop=None):
                 ],
                 "select": [
                     {
-                        "name": "date_fails",
-                        "value": {
-                            "mult": [
-                                {"div": [{"sub": {"build.date": today + 0.5 * DAY}}, DAY.seconds]},
-                                {"when": "result.ok", "then": 0, "else": 1}
-                            ]
-                        },
-                        "aggregate": "stats"
-                    },
-                    {
-                        "name": "date",
-                        "value": {"div": [{"sub": {"build.date": today + 0.5 * DAY}}, DAY.seconds]},
-                        "aggregate": "stats"
-                    },
-                    {
-                        "name": "fails",
+                        "name": "fail",
                         "value": {"when": "result.ok", "then": 0, "else": 1},
-                        "aggregate": "stats"
+                        "aggregate": "sum"
+                    },
+                    {
+                        "name": "pass",
+                        "value": {"when": "result.ok", "then": 1, "else": 0},
+                        "aggregate": "sum"
+                    },
+                    {
+                        "aggregate": "count"
                     }
                 ],
                 "where": {"and": [
@@ -117,7 +104,7 @@ def agg(today, destination, debug_filter=None, please_stop=None):
                     {"in": {"result.test": tests}}
                 ]},
                 "format": "list",
-                "limit": 100000
+                "limit": 10000
             })
 
             # FOR EACH TEST, CALCULATE THE "RECENTLY BAD" STATISTIC (linear regression slope)
@@ -126,25 +113,22 @@ def agg(today, destination, debug_filter=None, please_stop=None):
                 try:
                     t._id = "-".join([
                         coalesce(t.build.product, ""),
+                        t.build.branch,
                         t.build.platform,
                         coalesce(t.build.type, ""),
                         coalesce(t.run.type, ""),
                         t.run.suite,
                         t.test,
-                        unicode(today.unix)
+                        text_type(today.unix)
                     ])
-                except Exception, e:
+                except Exception as e:
                     Log.error("text join problem", cause=e)
                 t.timestamp = today
-                t.average = t.fails.avg
-                if t.date.var == 0:
-                    t.slope = 0
-                else:
-                    t.slope = (t.date_fails.avg - t.date.avg * t.fails.avg) / t.date.var
+                # t.average = t.fail / t.count
                 t.etl.timestamp = Date.now()
 
             # PUSH STATS TO ES
-            docs = [{"id": t._id, "value": t} for t in tests_summary.data if t.fails.sum > 0]
+            docs = [{"id": t._id, "value": t} for t in tests_summary.data]
             Log.note("Adding {{num}} test summaries", num=len(docs))
             destination.extend(docs)
 
@@ -201,7 +185,7 @@ def main():
             please_stop = Signal()
             Thread.run("aggregator", loop_all_days, es, please_stop=please_stop)
             Thread.wait_for_shutdown_signal(please_stop=please_stop, allow_exit=True)
-    except Exception, e:
+    except Exception as e:
         Log.error("Serious problem with Test Failure Aggregator service!  Shutdown completed!", cause=e)
     finally:
         Log.stop()

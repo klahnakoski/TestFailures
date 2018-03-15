@@ -5,11 +5,11 @@
 	"destination": {
 		"host": "http://activedata.allizom.org",
 		"port": 9200,
-		"index": "test_failures",
-		"type": "test_failures",
+		"index": "unittest-summary",
+		"type": "test_summary",
 		"timeout": 300,
 		"schema": {
-			"$ref": "//../schema/test_failures.json"
+			"$ref": "//../schema/test_summary.json"
 		},
 		"debug": false,
 		"limit_replicas": false
@@ -31,7 +31,7 @@
 			},
 			{
 				"class": "logging.handlers.RotatingFileHandler",
-				"filename": "logs/test_failure_agg.log",
+				"filename": "logs/test_summary_agg.log",
 				"maxBytes": 10000000,
 				"backupCount": 10,
 				"encoding": "utf8"
