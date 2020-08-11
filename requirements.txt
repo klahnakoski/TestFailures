@@ -6,4 +6,4 @@ mo_json
 mo_logs
 mo_threads
 mo_times
-pyLibrary
+pyLibrary==2.1.18074

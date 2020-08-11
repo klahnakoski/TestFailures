@@ -16,7 +16,7 @@ from mo_dots import wrap, coalesce
 from mo_future import text_type
 from mo_json import value2json
 from mo_logs import Log, startup, constants
-from mo_threads import Signal, Thread
+from mo_threads import Signal, Thread, MAIN_THREAD
 from mo_times import DAY, Date, WEEK
 from pyLibrary.env import http, elasticsearch
 
@@ -115,8 +115,8 @@ def agg(today, destination, debug_filter=None, please_stop=None):
                         coalesce(t.build.product, ""),
                         t.build.branch,
                         t.build.platform,
-                        coalesce(t.build.type, ""),
-                        coalesce(t.run.type, ""),
+                        value2json(t.build.type),
+                        value2json(t.build.type),
                         t.run.suite,
                         t.test,
                         text_type(today.unix)
@@ -124,7 +124,6 @@ def agg(today, destination, debug_filter=None, please_stop=None):
                 except Exception as e:
                     Log.error("text join problem", cause=e)
                 t.timestamp = today
-                # t.average = t.fail / t.count
                 t.etl.timestamp = Date.now()
 
             # PUSH STATS TO ES
@@ -184,7 +183,7 @@ def main():
 
             please_stop = Signal()
             Thread.run("aggregator", loop_all_days, es, please_stop=please_stop)
-            Thread.wait_for_shutdown_signal(please_stop=please_stop, allow_exit=True)
+            MAIN_THREAD.wait_for_shutdown_signal(please_stop=please_stop, allow_exit=True, wait_forever=False)
     except Exception as e:
         Log.error("Serious problem with Test Failure Aggregator service!  Shutdown completed!", cause=e)
     finally:

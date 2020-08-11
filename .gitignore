@@ -3,10 +3,8 @@
 *.pyc
 *.tab
 out
-pyLibrary/.svn
+.svn
 .idea
 *.iml
-*.txt
-/pyLibrary/.svn
 /results
 /.env
